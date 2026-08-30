@@ -1,0 +1,9 @@
+/* The one import a consuming app needs:
+ *
+ *   @import "@jelly-health/design-system/styles";
+ *
+ * Order matters — fonts before tokens, so --font-sans resolves to faces that
+ * are already declared.
+ */
+@import "./fonts.css";
+@import "./tokens.css";

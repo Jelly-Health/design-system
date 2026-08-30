@@ -1,0 +1,47 @@
+/* Overused Grotesk — self-hosted.
+ *
+ * Self-hosted rather than pulled from a font CDN for two reasons: no
+ * third-party request keeps the analytics/consent story clean on the marketing
+ * site, and the console cannot depend on a network it may not have.
+ *
+ * Files are the same four faces already used by the v9 design canvases, copied
+ * from RandomMaerks/Overused-Grotesk (OFL) on 2026-08-16 per that project's
+ * github.md. Do not swap them for a different cut without re-checking the
+ * canvases still render.
+ *
+ * Whether a second display face (BIZ UDPMincho serif, used by the v1 marketing
+ * wordmark) earns a place is OPEN — JH138 checklist item 1.3. It is deliberately
+ * not defined here.
+ */
+
+@font-face {
+  font-family: "Overused Grotesk";
+  src: url("../fonts/OverusedGrotesk-Roman.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Overused Grotesk";
+  src: url("../fonts/OverusedGrotesk-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Overused Grotesk";
+  src: url("../fonts/OverusedGrotesk-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Overused Grotesk";
+  src: url("../fonts/OverusedGrotesk-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

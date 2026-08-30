@@ -1,0 +1,74 @@
+/* Jelly Health 2.0 — design tokens
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ WHAT IS IN THIS FILE, AND WHAT IS DELIBERATELY NOT                      │
+ * │                                                                          │
+ * │ SETTLED — transcribed from the v9 design canvases, not invented here.    │
+ * │   The 11 semantic colour roles, bound light and dark.                    │
+ * │                                                                          │
+ * │ ABSENT ON PURPOSE — type scale, spacing scale, radius scale, and the     │
+ * │   warm/member palette roles. These are JH138 checklist items 1.2–1.4     │
+ * │   and they are DESIGN decisions. Writing a guess here would make the     │
+ * │   guess the system: every screen built against it inherits it, and the   │
+ * │   designer arrives to find the question already answered. That is        │
+ * │   exactly how v1 ended up with colour hardcoded in 157 places.           │
+ * │                                                                          │
+ * │   They land here when the design pass produces them. Not before.         │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * `@theme static`, not the bare form: Tailwind v4 emits a theme variable only
+ * when a generated utility references it, so a token used only as a
+ * hand-authored var(--color-*) is silently pruned from the build — identically
+ * in dev and prod. `static` forces every token below into the output. The
+ * website repo hit this already; keep it.
+ *
+ * Dark mode uses the `.dark` class variant, matching the website's existing
+ * `@custom-variant dark (&:is(.dark *))`.
+ */
+
+@theme static {
+  /* ── Colour roles ────────────────────────────────────────────────────────
+   * Names are the canvases' own, kept verbatim. They are terse and
+   * console-derived, and a "better" name here would mean the design and the
+   * code speak different languages — which is the drift this package exists
+   * to prevent. Source: v7 A1–A5, v7 B, v8 C.
+   */
+  --color-bg: #ffffff;      /* page ground */
+  --color-sur: #fbfbfd;     /* raised surface */
+  --color-card: #ffffff;    /* card fill */
+  --color-ink: #1c1468;     /* primary text */
+  --color-ink2: #494383;    /* secondary text */
+  --color-ink3: #9691b8;    /* muted text */
+  --color-mut: #f4f4fb;     /* muted fill */
+  --color-line: #e2e0ef;    /* hairline border */
+  --color-ring: #2f249b;    /* focus ring */
+  --color-dang: #b42318;    /* destructive */
+  --color-accink: #2f249b;  /* accent text/fill */
+
+  --font-sans: "Overused Grotesk", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.dark {
+  --color-bg: #0d0a26;
+  --color-sur: #241d68;
+  --color-card: #241d68;
+  --color-ink: #fbfbfd;
+  --color-ink2: #9691b8;
+
+  /* 🔴 UNRESOLVED — JH138 item 1.2. The canvases bind no dark value for ink3.
+   * It is set to ink2's dark value here so nothing renders invisible, which is
+   * a STOPGAP, not a decision: it collapses the muted-text tone into the
+   * secondary-text tone, so the two are indistinguishable in dark.
+   *
+   * Compounding it, #9691b8 is simultaneously --color-line in dark below. A
+   * text tone and a border tone sharing one value is a contrast problem that
+   * needs measuring, not asserting. Do not treat this line as settled. */
+  --color-ink3: #9691b8;
+
+  --color-mut: #241d68;
+  --color-line: #9691b8;
+  --color-ring: #9691b8;
+  --color-dang: #ff9b8f;
+  --color-accink: #fbfbfd;
+}
