@@ -1,5 +1,29 @@
 # `@jelly-health/design-system`
 
+> # 🔴 Read this before building anything here
+>
+> **This package is a stub awaiting extraction, not a source of truth.** It was created 2026-08-30
+> on the belief that no design system existed. That was wrong — it was written from a checkout **147
+> commits behind `origin/main`**.
+>
+> **The real design system already lives in `web-app/v2`** and has since 2026-08-24:
+> `v2/app/globals.css` (a documented token layer with a measured dark palette), 19 `components/ui/`
+> primitives, both fonts self-hosted, and a `/v2/design-system` showcase page. Cards `C-02`, `C-17`
+> and `C-18` — all Done and merged.
+>
+> **The plan is to extract that into this package**, not to build a second system here. The tokens in
+> `src/styles/tokens.css` below are hand-transcribed and **inferior to v2's** — v2's record how many
+> times each value appears in the canvases and in what CSS role, and its dark values carry measured
+> WCAG ratios. Do not build against this file; it is replaced by the extraction.
+>
+> Tracking: [JH206](https://trello.com/c/8IVqteek) (tokens) · [JH207](https://trello.com/c/aso7xYid)
+> (primitives) · [JH210](https://trello.com/c/uzoGmmd5) (point v2 at the package).
+> Plan: `~/agent-artifacts/jellyhealth/design-system/02-TASK-BREAKDOWN.md`.
+>
+> **Extract at unchanged values first and prove v2 still renders**, then change anything. v2 has live
+> console work built on the current tokens.
+
+
 Design tokens and components shared by **`Jelly-Health/website`** (marketing) and
 **`web-app/v2`** (the patient app and clinical console).
 

@@ -1,5 +1,11 @@
 /* Jelly Health 2.0 — design tokens
  *
+ * 🔴 PROVISIONAL — SUPERSEDED BY web-app/v2. See README.md's notice.
+ *   The real token layer is `v2/app/globals.css` on origin/main: same palette, but each value
+ *   records its occurrence count and CSS role in the canvases, the dark values carry measured WCAG
+ *   ratios, and a radius scale is already chosen (--radius: 0.75rem). This file is hand-transcribed
+ *   and is the extraction TARGET, not the source. Do not build against it. — 2026-08-30
+ *
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │ WHAT IS IN THIS FILE, AND WHAT IS DELIBERATELY NOT                      │
  * │                                                                          │
