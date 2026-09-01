@@ -132,6 +132,19 @@ const nextConfig = {
 };
 ```
 
+**Two ways to load the fonts — pick by whether you can express `unicode-range`.**
+
+| | Files | Who |
+|---|---|---|
+| Import `…/styles` (tokens + `fonts.css`) | the `-latin` / `-ext` slices, each with a `unicode-range` | `Jelly-Health/website`. A page of English costs **67KB** |
+| Declare the faces yourself | `InterVariable-latinext.woff2`, `InterVariable-Italic-latinext.woff2` — one combined file per face, **154KB** | `web-app/v2`, which uses `next/font/local` |
+
+`next/font/local`'s `src` entries accept only `{ path, weight, style }` — there is no `unicodeRange`
+option, and the top-level `declarations` applies to every generated face, so per-file ranges are not
+expressible. Hence the combined cut. Both paths keep full extended-Latin coverage; only the download
+strategy differs. `scripts/verify-fonts.py` asserts the combined files ship **and** stay out of
+`fonts.css` — referencing one there would hand the site a 154KB face instead of the 67KB slice.
+
 **3 · Import the styles** at the top of your `globals.css`, before your own `@theme` block:
 
 ```css

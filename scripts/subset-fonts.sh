@@ -32,6 +32,32 @@
 # diacritic still renders in Inter; the browser simply fetches that slice when a
 # character in its range appears. Do not "simplify" this back to one file.
 #
+# A THIRD OUTPUT PER FACE, FOR CONSUMERS THAT CANNOT EXPRESS unicode-range
+# ------------------------------------------------------------------------
+# The split above only works if the consumer can attach a `unicode-range` to each
+# slice. src/styles/fonts.css does, so Jelly-Health/website gets the 67KB path.
+#
+# web-app/v2 CANNOT. It loads these faces through `next/font/local`, deliberately
+# -- that generates a size-adjusted fallback so the swap does not reflow, and it
+# emits --font-sans-loaded, which v2's tests/e2e/basepath.spec.ts asserts on.
+# Neither is achievable with a bare @font-face. And `next/font/local`'s src
+# entries accept only { path, weight, style }: there is NO unicodeRange option,
+# and the top-level `declarations` applies to every generated face, so it cannot
+# express per-file ranges either. Two src entries with identical family/weight/
+# style do not fall through -- without unicode-range the later face simply wins.
+#
+# So v2 needs ONE file per face. It gets the combined Latin+Ext cut: 154KB rather
+# than the 352KB original, and it keeps full extended-Latin coverage, which
+# matters because these are patient and clinician names.
+#
+#     original             352,240
+#     latinext, one file   154,540   <- what web-app/v2 loads
+#     latin slice           66,792   <- what a page of English costs on the site
+#
+# Deleting these two files breaks v2's build outright: `Font file not found`.
+# That is exactly how this gap was found (2026-09-01) -- the split shipped, v2
+# re-pinned, and the build failed on a filename that no longer existed.
+#
 # THE SOURCE FILES ARE IN fonts-src/, NOT src/fonts/
 # --------------------------------------------------
 # src/fonts/ holds the subset OUTPUT and is overwritten by this script. The full
@@ -89,8 +115,12 @@ for face in InterVariable InterVariable-Italic; do
   before=$(wc -c < "$src" | tr -d ' ')
   total_before=$((total_before + before))
 
-  for slice in latin ext; do
-    if [ "$slice" = latin ]; then unicodes="$LATIN"; else unicodes="$LATIN_EXT"; fi
+  for slice in latin ext latinext; do
+    case "$slice" in
+      latin)    unicodes="$LATIN" ;;
+      ext)      unicodes="$LATIN_EXT" ;;
+      latinext) unicodes="${LATIN},${LATIN_EXT}" ;;
+    esac
     out="src/fonts/${face}-${slice}.woff2"
 
     # No --instancer / --variations flag, deliberately: instancing flattens the

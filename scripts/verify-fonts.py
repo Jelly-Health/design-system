@@ -64,7 +64,9 @@ FIGURE_FEATURES = {
     "tnum": "tokens.css --numeric-console: tabular-nums",
     "pnum": "tokens.css --numeric-member: proportional-nums",
 }
-HAS_DIGITS = "latin"
+# Slices whose range covers the ASCII digits, and which therefore must carry the
+# figure features. `latinext` is the combined cut web-app/v2 loads.
+HAS_DIGITS = {"latin", "latinext"}
 
 # Characters each slice promises. Latin Extended is sampled from real name
 # orthographies -- French, Spanish, Polish, Czech, Turkish, Romanian, Hungarian
@@ -73,6 +75,9 @@ SAMPLES = {
     "latin": "AaZz09éñüçßıœ€£–—'\"…",
     "ext": "łżćšČžğșțőűā",
 }
+# The combined cut promises both ranges at once, so it must satisfy both samples.
+# Derived rather than written out, so widening either range cannot leave this stale.
+SAMPLES["latinext"] = SAMPLES["latin"] + SAMPLES["ext"]
 
 failures: list[str] = []
 
@@ -138,7 +143,7 @@ def check_font(path: Path, *, variable: bool, sample_key: str | None,
 
     if sample_key:
         expected = dict(REQUIRED_FEATURES)
-        if sample_key == HAS_DIGITS:
+        if sample_key in HAS_DIGITS:
             expected.update(FIGURE_FEATURES)
         for feat, why in expected.items():
             if feat not in features:
@@ -164,7 +169,7 @@ def check_font(path: Path, *, variable: bool, sample_key: str | None,
 
 print("Shipped faces (src/fonts/):")
 for face in ("InterVariable", "InterVariable-Italic"):
-    for slice_ in ("latin", "ext"):
+    for slice_ in ("latin", "ext", "latinext"):
         check_font(
             ROOT / f"src/fonts/{face}-{slice_}.woff2",
             variable=True,
@@ -182,12 +187,33 @@ for ref in sorted(referenced):
     if not (ROOT / "src/fonts" / ref).exists():
         failures.append(f"fonts.css references src/fonts/{ref}, which does not exist")
 
+# The combined Latin+Ext cuts. These deliberately have NO @font-face in fonts.css:
+# they exist for web-app/v2, which loads faces through `next/font/local` and so
+# cannot attach a `unicode-range` to a slice (its src entries take only
+# { path, weight, style }). v2 gets one 154KB file per face instead of the 352KB
+# original; the website keeps the 67KB latin slice. See scripts/subset-fonts.sh.
+NEXT_FONT_FACES = {
+    "InterVariable-latinext.woff2",
+    "InterVariable-Italic-latinext.woff2",
+}
+
 # 1b: ...and nothing may ship that no @font-face references. This is what catches
 # an old undivided face left behind by a previous revision: harmless to render,
 # but it is dead weight in every consumer's install.
 for f in sorted((ROOT / "src/fonts").glob("*.woff2")):
-    if f.name not in referenced:
+    if f.name not in referenced and f.name not in NEXT_FONT_FACES:
         failures.append(f"src/fonts/{f.name} ships but no @font-face references it")
+
+# 1c: the combined cuts must ship, and must stay unreferenced. Deleting one breaks
+# v2's build outright with `Font file not found` -- which is exactly how this gap
+# was found on 2026-09-01, after the split shipped and v2 re-pinned onto it.
+# Referencing one from fonts.css would hand the website a 154KB face in place of
+# the 67KB slice, silently undoing the Lighthouse fix that motivated the split.
+for name in sorted(NEXT_FONT_FACES):
+    if not (ROOT / "src/fonts" / name).exists():
+        failures.append(f"src/fonts/{name} is missing -- web-app/v2 cannot build without it")
+    if name in referenced:
+        failures.append(f"fonts.css references {name}; that reverts the site to an unsplit face")
 
 # 2: the ranges on both sides must agree, or the split produces tofu.
 sh = script_ranges()
