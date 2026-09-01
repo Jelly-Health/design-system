@@ -137,6 +137,25 @@ installs — it is imported by `accordion`, `checkbox`, `dialog`, `radio-group` 
 consumer code, and two majors resolving side by side means a duplicated bundle and two incompatible
 icon component types. Decided 2026-09-01, [JH200](https://trello.com/c/DjdTEk90).
 
+**3 · Adopt the type-ramp lint rule (optional but recommended).** `scripts/verify-type-ramp.py`
+(JH213) only sees this package's own primitives — it has no visibility into a consumer that
+reintroduces a bare `text-sm`. This closes that gap one hop further out:
+
+```js
+// eslint.config.mjs
+import jhRules from "@jelly-health/design-system/eslint";
+export default [...jhRules, ...yourExistingConfig];
+```
+
+Flags any of Tailwind's generic size utilities (`text-sm`, `text-base`, `text-lg`, …) inside a
+`className`/`class` attribute or a `cn()`/`clsx()`/`cva()`/`classnames()` call — scoped to those
+call sites specifically, not every string literal in a file, so it doesn't fire on ordinary prose
+that happens to contain the substring. Verified against the real `eslint` `Linter` API in
+`scripts/verify-eslint-rule.mjs`, mutation-tested (removing the scope check, or the regex's word
+boundary, each break a specific fixture). ⚠️ Not wired into this repo's own CI — the package has no
+lockfile and CI runs no `npm install` today; run the script manually, or rely on it running as part
+of a consumer's own `eslint .`. Decided 2026-09-01, [JH216](https://trello.com/c/1gBQlgIn).
+
 **2 · Transpile it.** The package ships TypeScript and CSS source with **no build step** — deliberately,
 since a build is a release pipeline and a release pipeline is the cost we were trying to keep small:
 
