@@ -115,18 +115,44 @@
   --weight-medium: 510;
   --weight-semibold: 590;     /* the ceiling. There is no 700 in this system. */
 
-  --text-2xs: 10px;
-  --text-sm: 12px;
-  --text-base: 13px;          /* console primary */
-  --text-md: 15px;
-  --text-lg: 16px;            /* MEMBER BODY FLOOR — the audience straddles presbyopia onset */
-  --text-xl: 20px;
-  --text-2xl: 24px;
-  --text-3xl: 32px;
-  --text-4xl: 48px;
-  --text-5xl: 64px;
-  --text-6xl: 72px;
-  --text-member-body: var(--text-lg);
+  /* ⚠️ These are PREFIXED, and the prefix is the whole point. An earlier cut of this file bound
+   * these values to Tailwind's own generic names (`--text-sm`, `--text-base`, `--text-lg`), which
+   * meant every `text-sm` already written in a consuming app silently changed size the moment it
+   * adopted the package — no error, no warning, nothing to review against. Measured on the
+   * marketing site: nav links, both CTAs and the footer went 14px → 12px, the hero paragraph
+   * 18px → 16px. That put the most member-facing surface we have a quarter BELOW the member body
+   * floor this very file declares, and axe passed, because a small font is not a WCAG failure.
+   *
+   * Console density is now opt-in. `text-console-base` is a decision; `text-sm` is Tailwind's
+   * stock 14px and stays that way.
+   *
+   * Do not reintroduce a bare `--text-<size>` declaration anywhere in this file. Removing the
+   * `@theme inline` alias alone does NOT restore Tailwind's value — a plain `:root` declaration
+   * clobbers the theme layer by cascade regardless, which is why the names themselves moved.
+   * scripts/verify-type-ramp.py fails on it.
+   */
+  --text-console-2xs: 10px;
+  --text-console-sm: 12px;
+  --text-console-base: 13px;  /* console primary */
+  --text-console-md: 15px;
+  --text-console-lg: 16px;    /* MEMBER BODY FLOOR — the audience straddles presbyopia onset */
+  --text-console-xl: 20px;
+  --text-console-2xl: 24px;
+  --text-console-3xl: 32px;
+  --text-console-4xl: 48px;
+  --text-console-5xl: 64px;
+  --text-console-6xl: 72px;
+
+  /* Holds 16px directly rather than aliasing a console step. It resolved to exactly this before
+   * the rename (it pointed at the old `--text-lg`); pointing member body at a console token was
+   * always the wrong semantics, and under the prefix it would read as one. */
+  --text-member-body: 16px;
+
+  /* The one fluid step. Ported verbatim from Jelly-Health/website, where it already ships and was
+   * itself carried over from v1 — not a new value. A marketing hero needs type that tracks the
+   * viewport; the console sits at a 1280px floor and never does, which is why the rest of this
+   * ramp is fixed and only this is not. A fuller display scale is unbuilt and needs a designer. */
+  --text-h1: clamp(2rem, 2.2vw + 1.35rem, 3.5rem);
 
   /* Negative, scaled to size. Positive tracking survives on uppercase micro-labels only
    * (`--tracking-micro`) — uppercase always needs it, and that is the one place the rule inverts. */
@@ -434,17 +460,22 @@
   --radius-lg: var(--radius-lg);      /* 12px — cards, panels */
   --radius-xl: var(--radius-lg);      /* 12px — the ceiling */
 
-  --text-2xs: var(--text-2xs);
-  --text-sm: var(--text-sm);
-  --text-base: var(--text-base);
-  --text-md: var(--text-md);
-  --text-lg: var(--text-lg);
-  --text-xl: var(--text-xl);
-  --text-2xl: var(--text-2xl);
-  --text-3xl: var(--text-3xl);
-  --text-4xl: var(--text-4xl);
-  --text-5xl: var(--text-5xl);
-  --text-6xl: var(--text-6xl);
+  /* Console ramp as utilities: `text-console-base`, `text-console-lg`. Tailwind's generic
+   * `text-sm`/`text-base`/`text-lg` are deliberately NOT aliased here and keep their stock
+   * values — see the note in the type block above. */
+  --text-console-2xs: var(--text-console-2xs);
+  --text-console-sm: var(--text-console-sm);
+  --text-console-base: var(--text-console-base);
+  --text-console-md: var(--text-console-md);
+  --text-console-lg: var(--text-console-lg);
+  --text-console-xl: var(--text-console-xl);
+  --text-console-2xl: var(--text-console-2xl);
+  --text-console-3xl: var(--text-console-3xl);
+  --text-console-4xl: var(--text-console-4xl);
+  --text-console-5xl: var(--text-console-5xl);
+  --text-console-6xl: var(--text-console-6xl);
+  --text-member-body: var(--text-member-body);
+  --text-h1: var(--text-h1);
 
   --shadow-float: var(--shadow-float);
   --ease-jh: var(--ease);
