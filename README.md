@@ -116,6 +116,12 @@ pipeline to maintain for a system with one designer and one engineer:
 
 Pin a commit SHA instead of `main` when you want the app to stop moving under you.
 
+**Peer dependencies you must supply:** `react` / `react-dom` `^19`, and **`lucide-react` `^1`**. Lucide
+is a peer rather than a dependency so that the consumer owns the version and only **one** copy
+installs — it is imported by `accordion`, `checkbox`, `dialog`, `radio-group` and `select`, and by
+consumer code, and two majors resolving side by side means a duplicated bundle and two incompatible
+icon component types. Decided 2026-09-01, [JH200](https://trello.com/c/DjdTEk90).
+
 **2 · Transpile it.** The package ships TypeScript and CSS source with **no build step** — deliberately,
 since a build is a release pipeline and a release pipeline is the cost we were trying to keep small:
 
