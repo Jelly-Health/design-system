@@ -9,3 +9,8 @@ export { cn } from "./lib/utils";
  * exactly this reason. See README § "Importing a primitive".
  */
 export * from "./components/ui";
+
+/* The wordmark. Kept out of `./components/ui` -- it is brand, not a shadcn primitive, and it
+ * carries no "use client" boundary concern, so it needs no `/brand/*` subpath the way `/ui/*`
+ * does. See JH200 / src/components/brand/wordmark.tsx. */
+export * from "./components/brand/wordmark";
