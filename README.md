@@ -52,7 +52,9 @@ it does not get re-litigated as though nobody had thought about it.
 - **11 semantic colour roles, bound light and dark** — `bg`, `sur`, `card`, `ink`, `ink2`, `ink3`,
   `mut`, `line`, `ring`, `dang`, `accink`. Transcribed from the v9 design canvases, not invented here.
   The names are the canvases' own and stay that way, so the design and the code speak one language.
-- **Overused Grotesk**, four weights, self-hosted.
+- **Inter Variable**, self-hosted, plus IBM Plex Mono for identifiers. (This bullet said *Overused
+  Grotesk* until 2026-09-01; that typeface was retired during the design pass and the sentence had
+  simply been left behind — the table below has been right since JH206.)
 - `cn()`, so a component from this package and a component written in an app resolve class conflicts
   identically.
 
@@ -81,9 +83,17 @@ their design", and connecting them to the designed vocabulary is a real design d
 
 ### Known gaps, recorded rather than hidden
 
-- **Font payload grew by ~509KB.** Inter Variable (352KB) plus its italic (388KB) against the four
-  Overused Grotesk faces (251KB) it replaced. The italic is used in exactly two places, both
-  empty-state labels. Neither file is subsetted; subsetting to Latin is the fix and has not been done.
+- ~~**Font payload grew by ~509KB.**~~ **Fixed 2026-09-01 (JH211).** The faces are now subset and
+  split into `latin` / `latin-ext` slices, each with its own `unicode-range`, so a page downloads
+  only the slices it uses. **A page of English costs 67KB where it used to cost 352KB — 81% less.**
+  Regenerate with `scripts/subset-fonts.sh`; the full originals live in `fonts-src/`, which is not
+  shipped. `scripts/verify-fonts.py` asserts the axes, `tnum`/`pnum`, mark positioning, slice
+  coverage and range agreement, and is mutation-tested against both ways of getting it wrong.
+
+  This was not housekeeping. Unsubset, the fonts broke the marketing site's mobile Lighthouse budget
+  outright — measured on `Jelly-Health/website`: performance 0.97 → 0.85 against a 0.90 floor, LCP
+  2.1s → 3.8s against a 2500ms budget. Subsetting to one Latin+Ext file was **not enough** (median
+  LCP 2562ms, still failing); the `unicode-range` split is what brought it to 2048ms.
 - **The legacy `--jh-*` brand ramp is deprecated but still shipped.** 22 live call sites in `v2`
   (`brand-300` ×19, `brand-700` ×2, `brand-025` ×1). It is re-pointed onto roles so those sites stay
   on-palette; it should shrink to nothing as they are touched.
