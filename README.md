@@ -56,38 +56,33 @@ it does not get re-litigated as though nobody had thought about it.
 - `cn()`, so a component from this package and a component written in an app resolve class conflicts
   identically.
 
-## What is not here yet — and why that is deliberate
+## What landed, and what is still absent
 
-**No type scale. No spacing scale. No radius scale. No warm/member palette roles. No components.**
+**Type, spacing, shape and motion scales are now here.** They were withheld until the design pass
+produced them — a plausible guess written earlier would have become the system by default. The pass
+shipped as `jh-design-system-v10` and JH206 commit 3 brought all four in, along with the designed
+colour values.
 
-These are JH138 checklist items 1.2–1.4 and 2, and they are **design decisions, not transcription.**
-A plausible guess written here would become the system by default — every screen built against it
-inherits it, and the designer arrives to find the question already answered. That is the mechanism that
-produced v1's 157 hardcoded colours.
+| | State |
+|---|---|
+| Colour | 25 roles, both themes. 150 contrast pairs recomputed from the values in this file: **0 failures**, 7 within 0.15 of their floor and marked `tight` |
+| Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590, 11-step size ramp, negative tracking scaled to size |
+| Spacing | 8px base, 9 steps plus named surface paddings and a 44px member touch floor |
+| Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px ceiling — plus one floating-layer shadow |
+| Motion | 100/120/200ms, one easing curve, focus-ring geometry |
 
-The measured state of each, as of 2026-08-30:
+**Still absent: components.** `src/index.ts` exports `cn` and nothing else. That is JH207.
 
-| | Found in the canvases | Meaning |
-|---|---|---|
-| Type | **32 distinct sizes**, incl. half-pixels (`12.5px`, `11.5px`, `13.5px`) | Hand-nudged, not a scale |
-| Spacing | **20 distinct `gap` values** — 6/7/8/9/10px all in use | Five neighbouring values doing one job |
-| Radius | **19 distinct radii** | An 8/12/16 cluster with noise around it |
-| Warm palette | cream `#faf7f2`, peach `#ecdfd7`, success `#00793e` | In use, **no role name, no dark value** |
+### Known gaps, recorded rather than hidden
 
-They land here when the design pass produces them.
-
-**Update 2026-08-31:** the design pass has now shipped (`jh-design-system-v10`) and produced all
-four. They arrive in a later JH206 commit, kept separate from this one so the extraction can be
-reviewed as plumbing before any value changes.
-
-### One thing in here is a stopgap, not a decision
-
-`--color-ink3` has **no dark value in the canvases.** `tokens.css` sets it to `ink2`'s dark value so
-nothing renders invisible — which collapses muted text into secondary text, and `#9691b8` is
-simultaneously `--color-line` in dark. A text tone and a border tone sharing one value needs a measured
-contrast ratio, not an assertion. Flagged in the file itself; do not read it as settled.
-
----
+- **Font payload grew by ~509KB.** Inter Variable (352KB) plus its italic (388KB) against the four
+  Overused Grotesk faces (251KB) it replaced. The italic is used in exactly two places, both
+  empty-state labels. Neither file is subsetted; subsetting to Latin is the fix and has not been done.
+- **The legacy `--jh-*` brand ramp is deprecated but still shipped.** 22 live call sites in `v2`
+  (`brand-300` ×19, `brand-700` ×2, `brand-025` ×1). It is re-pointed onto roles so those sites stay
+  on-palette; it should shrink to nothing as they are touched.
+- **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
+  is bound up with the release-process decision that is still open.
 
 ## Using it
 
