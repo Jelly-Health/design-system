@@ -346,6 +346,12 @@
 @theme inline {
   --font-sans: var(--font-text);
   --font-mono: var(--font-mono);
+  /* `font-serif` is a deliberate no-op alias, not an oversight. The design pass retired the serif
+   * and this is a single-family system, but `font-serif` is still on 23 call sites in v2 (sign-in,
+   * the showcase, page headings). Without this the utility falls through to Tailwind's default and
+   * renders Georgia. Pointing it at the one family keeps every call site correct while they are
+   * migrated off it; this token should be deleted once none remain. */
+  --font-serif: var(--font-text);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
