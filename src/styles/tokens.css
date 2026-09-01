@@ -477,6 +477,29 @@
   --text-member-body: var(--text-member-body);
   --text-h1: var(--text-h1);
 
+  /* Line-height, mapped DELIBERATELY like radius above — not derived by ratio. Without this,
+   * Tailwind pairs each `--text-<size>` with a `--text-<size>--line-height` computed against
+   * TAILWIND'S OWN font size for that name, which is meaningless once the size is ours: `lg` got
+   * 1.556, a ratio derived for stock 18px, applied to our 16px. Size-driven: larger text reads
+   * tighter, matching the usual type-system convention. `--text-member-body` deliberately does NOT
+   * reuse `--text-console-lg`'s leading despite being the same 16px — "member airy" is the point of
+   * having a separate token at all. scripts/verify-type-ramp.py checks every step below is paired
+   * and that the pairing is ours, not Tailwind's derived default. Decided 2026-09-01, JH215.
+   */
+  --text-console-2xs--line-height: var(--leading-relaxed);
+  --text-console-sm--line-height: var(--leading-relaxed);
+  --text-console-base--line-height: var(--leading-normal);
+  --text-console-md--line-height: var(--leading-normal);
+  --text-console-lg--line-height: var(--leading-normal);
+  --text-console-xl--line-height: var(--leading-snug);
+  --text-console-2xl--line-height: var(--leading-tight);
+  --text-console-3xl--line-height: var(--leading-tight);
+  --text-console-4xl--line-height: var(--leading-display);
+  --text-console-5xl--line-height: var(--leading-display);
+  --text-console-6xl--line-height: var(--leading-display);
+  --text-member-body--line-height: var(--leading-relaxed);
+  --text-h1--line-height: var(--leading-display);
+
   --shadow-float: var(--shadow-float);
   --ease-jh: var(--ease);
 }
