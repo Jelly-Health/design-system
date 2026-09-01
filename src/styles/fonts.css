@@ -9,25 +9,71 @@
  * ⚠️ It must be the VARIABLE file. The weight band is 300 / 400 / 510 / 590, and 510 and 590 are not
  * standard stops: they exist only on the variable weight axis. A static Inter silently rounds them to
  * 500 and 600, which is close enough to pass review and wrong.
+ *
+ * ⚠️ EACH FACE IS SPLIT INTO TWO SLICES, latin and latin-ext, each with its own `unicode-range`.
+ * The browser downloads a slice only when the page actually uses a character in its range, so a page
+ * of English costs 67KB rather than 352KB. This is not a micro-optimisation — the undivided file
+ * broke the marketing site's mobile Lighthouse budget outright (JH211, 2026-09-01: LCP 2.1s -> 3.8s
+ * against a 2500ms budget). latin-ext is deferred, never dropped: a name with a diacritic still
+ * renders in Inter, its slice simply arrives on demand.
+ *
+ * 🔴 The `unicode-range` values below MUST match the ranges in scripts/subset-fonts.sh exactly. A
+ * character inside a face's declared range but missing from its file renders as TOFU — the browser
+ * has been told that slice owns the character, so it does not fall through to the other one.
+ * Regenerate with scripts/subset-fonts.sh; never hand-edit a range on one side only.
  */
 
+/* ── Inter, upright ─────────────────────────────────────────────────────────────────────────── */
 @font-face {
   font-family: InterVariable;
   font-style: normal;
   font-weight: 100 900;          /* a RANGE. A single value collapses the axis. */
   font-display: swap;
-  src: url("../fonts/InterVariable.woff2") format("woff2");
+  src: url("../fonts/InterVariable-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+    U+FFFD;
+}
+@font-face {
+  font-family: InterVariable;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/InterVariable-ext.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ── Inter, italic ──────────────────────────────────────────────────────────────────────────────
+ * Used in exactly two places today, both empty-state labels. It is split the same way so that those
+ * two labels never pull a Cyrillic-sized payload for a line of English. */
+@font-face {
+  font-family: InterVariable;
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/InterVariable-Italic-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+    U+FFFD;
 }
 @font-face {
   font-family: InterVariable;
   font-style: italic;
   font-weight: 100 900;
   font-display: swap;
-  src: url("../fonts/InterVariable-Italic.woff2") format("woff2");
+  src: url("../fonts/InterVariable-Italic-ext.woff2") format("woff2");
+  unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* IBM Plex Mono, 400 and 500 only — identifiers, keyboard shortcuts, technical metadata.
- * Never headings. Named by the reference itself as the substitute for its own commercial mono. */
+/* ── IBM Plex Mono ──────────────────────────────────────────────────────────────────────────────
+ * 400 and 500 only — identifiers, keyboard shortcuts, technical metadata. Never headings. Named by
+ * the reference itself as the substitute for its own commercial mono.
+ *
+ * Not split and not subset: these are already ~10KB each, so a split would add two requests to save
+ * nothing. They are also STATIC faces by design, declared at fixed weights — there is no axis here
+ * to protect. */
 @font-face {
   font-family: "IBM Plex Mono";
   font-style: normal;
