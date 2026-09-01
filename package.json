@@ -18,7 +18,8 @@
     "./styles": "./src/styles/index.css",
     "./tokens.css": "./src/styles/tokens.css",
     "./fonts.css": "./src/styles/fonts.css",
-    "./fonts/*": "./src/fonts/*"
+    "./fonts/*": "./src/fonts/*",
+    "./eslint": "./src/eslint/index.mjs"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
