@@ -404,6 +404,7 @@
   --color-danger: var(--danger);
   --color-danger-surface: var(--danger-surface);
   --color-danger-on-danger: var(--danger-on-danger);
+  --color-scrim: var(--scrim);       /* JH207: no bg-scrim utility existed before this -- the gap was here, not the component */
   --color-success-ink: var(--success-ink);
   --color-success-surface: var(--success-surface);
   --color-pending-rule: var(--pending-rule);

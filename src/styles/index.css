@@ -7,3 +7,17 @@
  */
 @import "./fonts.css";
 @import "./tokens.css";
+
+/* `dialog`, `popover`, `select` and `tooltip` animate through `tw-animate-css` utilities
+ * (`animate-in`, `fade-out-0`, `zoom-in-95`, `slide-in-from-*`) that the package did not declare
+ * until JH207. Extracted without this, those four primitives would render correctly and simply
+ * never move — no error, dev or prod, identically to the Tailwind v4 silent-prune shape JH206
+ * found. The dependency is declared here because these are the primitives that need it.
+ *
+ * ⚠️ `v2` also imports `tw-animate-css` directly (`app/globals.css`), and did so before this
+ * package existed. A second `@import` of the same stylesheet is a duplicate load, not a conflict
+ * — CSS class rules are idempotent under re-declaration — but this was verified against a real
+ * build (JH207) rather than assumed. If `v2` drops its own import later, this one keeps the
+ * primitives working; nothing here depends on `v2`'s copy.
+ */
+@import "tw-animate-css";

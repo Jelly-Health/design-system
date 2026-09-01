@@ -70,8 +70,14 @@ colour values.
 | Spacing | 8px base, 9 steps plus named surface paddings and a 44px member touch floor |
 | Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px ceiling — plus one floating-layer shadow |
 | Motion | 100/120/200ms, one easing curve, focus-ring geometry |
+| Components | The 19 shadcn primitives (`accordion` through `tooltip`), extracted from `web-app/v2/components/ui/` by **JH207**. `src/index.ts` exports all of them; `./ui/*` subpath exports the same components individually |
 
-**Still absent: components.** `src/index.ts` exports `cn` and nothing else. That is JH207.
+**Still absent: the designed variant sheets.** The primitives carry their pre-design-pass geometry —
+`focus-visible:ring-[3px]` and `tw-animate-css` defaults, not the shipped `--ring-width`/`--ring-offset`
+or the `--duration-*` scale — and badge is `rounded-md` (6px) where JH198 specifies 4px for badges.
+None of that is an extraction defect: JH207's brief was "move the primitives, change nothing about
+their design", and connecting them to the designed vocabulary is a real design decision left to
+**JH201** (variant sheets) rather than made implicitly here.
 
 ### Known gaps, recorded rather than hidden
 
@@ -123,6 +129,26 @@ Tokens are then Tailwind utilities in the normal way — `bg-bg`, `text-ink`, `t
 ⚠️ **Keep `@theme static`.** Tailwind v4 emits a theme variable only when a generated utility references
 it, so a token used only as a hand-authored `var(--color-x)` is silently pruned — identically in dev and
 prod. The website repo has already hit this once.
+
+**4 · Import a primitive.** Two entry points, on purpose:
+
+```tsx
+import { Button } from "@jelly-health/design-system";       // the barrel — all 19, one import
+import { Button } from "@jelly-health/design-system/ui/button"; // one primitive, nothing else
+```
+
+The barrel is the ergonomic default. Reach for the subpath in a **Server Component** instead: 12 of
+the 13 Radix packages the primitives are built on ship their own `"use client"`, so importing the
+barrel pulls every primitive's module graph — client-only ones included — into whatever imports it.
+`web-app/v2` has a Server Component in exactly that position (`dose-flag.tsx`), which is why its
+showcase page (`app/design-system/page.tsx`) imports every primitive by subpath rather than from the
+barrel — not style, a real constraint. Verify which form you need against your own build's output;
+do not assume Next tree-shakes the unused ones away.
+
+⚠️ **Do not add `"use client"` to a primitive.** It is not needed — the Radix dependency already
+carries it, except `@radix-ui/react-slot` — and adding one anyway silently converts every Server
+Component that imports the barrel into a client one. This bit `web-app/v2` and is recorded so it
+does not get "fixed" as tidiness later.
 
 ---
 
