@@ -14,6 +14,7 @@
   ],
   "exports": {
     ".": "./src/index.ts",
+    "./ui/*": "./src/components/ui/*.tsx",
     "./styles": "./src/styles/index.css",
     "./tokens.css": "./src/styles/tokens.css",
     "./fonts.css": "./src/styles/fonts.css",
