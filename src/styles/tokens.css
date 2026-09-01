@@ -70,37 +70,43 @@
   --jh-indigo-850: #241d68; /* dark card/popover/muted surface. vs canvas 1.33:1; fg 14.01:1 */
   --jh-red-300: #ff9b8f; /* destructive text/icon on dark surfaces. vs card 7.13:1, vs canvas 9.50:1 */
 
-  /* ---- Semantic layer -------------------------------------------------------------------------
-   * shadcn's token names, so the `C-17` primitives re-skin without edits.
+  /* ---- Design-system roles --------------------------------------------------------------------
+   * The vocabulary the design system speaks (`jh-design-system-v10`). Introduced JH206 commit 2 at
+   * UNCHANGED values: every role below resolves to exactly the hex the shadcn layer resolved to
+   * before, and the shadcn layer now aliases onto these rather than onto the raw ramp.
+   *
+   * That indirection is the point. It makes commit 3 — the design pass's values — a change in one
+   * layer instead of forty scattered edits, and it puts the two vocabularies in one place where
+   * their disagreements are visible rather than discovered later.
+   *
+   * ⚠️ TWO NAMES INVERT. Read before editing either:
+   *   --mut          reads like shadcn's `--muted`, but it is the SELECTED/held state,
+   *                  which is shadcn's `--accent`. (`--muted` is a de-emphasised surface: `--sur`.)
+   *   --accent-fill  reads like shadcn's `--accent`, but it is the brand action fill —
+   *                  primary button, member bubble — which is shadcn's `--primary`.
+   * Mapping either by name similarity swaps selection with primary action, and the result looks
+   * plausible in review. v2's own note below reached the same conclusion from the other direction.
    */
-  --background: var(--jh-white);
-  --foreground: var(--jh-indigo-900);
-  --card: var(--jh-white);
-  --card-foreground: var(--jh-indigo-900);
-  --popover: var(--jh-white);
-  --popover-foreground: var(--jh-indigo-900);
-  --primary: var(--jh-indigo-900);
-  --primary-foreground: var(--jh-white);
+  --bg: var(--jh-white);            /* page ground */
+  --sur: var(--jh-indigo-050);      /* recessed surface: sidebars, section headers */
+  --ink: var(--jh-indigo-900);      /* primary text */
+  --ink-2: var(--jh-indigo-500);    /* secondary text */
+  --ink-3: var(--jh-indigo-300);    /* tertiary text: labels, timestamps, placeholders */
+  --mut: var(--jh-indigo-050);      /* SELECTED / held. Not "muted" — see the warning above */
+  --line: var(--jh-indigo-100);     /* hairline separator */
+  --accent-fill: var(--jh-indigo-900);   /* brand action fill. Not shadcn's `--accent` */
+  --accent-on-accent: var(--jh-white);   /* text on the action fill */
+  --danger: var(--jh-red-600);
+  --danger-on-danger: var(--jh-white);
+  --success-ink: var(--jh-green-700);
+  --success-surface: var(--jh-green-100);
+
+  /* These three are design-system names that are ALSO shadcn names. They are roles, so they are
+   * declared here and overridden in `.dark` — and deliberately NOT repeated in the alias block
+   * below, which comes later and would otherwise win and cancel the dark override. */
+  --card: var(--jh-white);          /* raised surface */
+  --ring: var(--jh-indigo-700);     /* focus ring */
   --secondary: var(--jh-indigo-100);
-  --secondary-foreground: var(--jh-indigo-900);
-  --muted: var(--jh-indigo-050);
-  --muted-foreground: var(--jh-indigo-500);
-  /* `accent` is shadcn's *hover* surface (`hover:bg-accent` on ghost and outline buttons, select
-   * and accordion rows), not the brand accent the name suggests. The saturated #2f249b belongs to
-   * `ring` and to `brand-700` for links — mapping it here turns every ghost-button hover into a
-   * solid indigo block. Checked against the ported primitives: bg-accent and bg-accent/50 appear
-   * only in hover and selected states. */
-  --accent: var(--jh-indigo-050);
-  --accent-foreground: var(--jh-indigo-900);
-  --destructive: var(--jh-red-600);
-  --destructive-foreground: var(--jh-white);
-  --success: var(--jh-green-700);
-  --success-foreground: var(--jh-white);
-  --success-muted: var(--jh-green-100);
-  --border: var(--jh-indigo-100);
-  --input: var(--jh-indigo-100);
-  --ring: var(--jh-indigo-700);
-  --placeholder: var(--jh-indigo-300);
 
   /* Sidebars in the wireframes are the brand surface with white text, not a tinted panel. */
   --sidebar: var(--jh-indigo-900);
@@ -159,25 +165,74 @@
  * white text), so the light-mode values serve both themes unchanged.
  */
 .dark {
-  --background: var(--jh-indigo-950);
-  --foreground: var(--jh-indigo-025);
+  /* Overrides the DESIGN ROLES, not the shadcn names — the shadcn layer aliases onto these and
+   * follows automatically. Same values as before, expressed one layer up. */
+  --bg: var(--jh-indigo-950);
+  --sur: var(--jh-indigo-850);
+  --ink: var(--jh-indigo-025);
+  --ink-2: var(--jh-indigo-300);
+  --mut: var(--jh-indigo-700);
+  --line: var(--jh-indigo-300);
+  --accent-fill: var(--jh-indigo-300);
+  --accent-on-accent: var(--jh-indigo-950);
+  --danger: var(--jh-red-300);
+  --danger-on-danger: var(--jh-indigo-950);
+
+  /* Not aliased to a design role: these have no v10 counterpart yet, or v2 deliberately leaves
+   * them at their light value. Both cases are preserved exactly. */
   --card: var(--jh-indigo-850);
-  --card-foreground: var(--jh-indigo-025);
-  --popover: var(--jh-indigo-850);
-  --popover-foreground: var(--jh-indigo-025);
-  --primary: var(--jh-indigo-300);
-  --primary-foreground: var(--jh-indigo-950);
   --secondary: var(--jh-indigo-700);
   --secondary-foreground: var(--jh-indigo-025);
-  --muted: var(--jh-indigo-850);
-  --muted-foreground: var(--jh-indigo-300);
-  --accent: var(--jh-indigo-700);
-  --accent-foreground: var(--jh-indigo-025);
-  --destructive: var(--jh-red-300);
-  --destructive-foreground: var(--jh-indigo-950);
-  --border: var(--jh-indigo-300);
-  --input: var(--jh-indigo-300);
   --ring: var(--jh-indigo-300);
+
+  /* `--ink-3` / `--placeholder` is intentionally NOT overridden, matching v2: none of the 19
+   * primitives consume it, and inventing a dark value for a token nothing renders would be
+   * guessing. Verify before the first primitive uses it. */
+}
+
+/* ---- Semantic layer — declared for BOTH contexts, and that is load-bearing --------------------
+ * `var()` substitutes at computed-value time. An alias declared only in `:root` resolves against
+ * `:root`'s value and inherits that result downward, so a `.dark` override of the role underneath
+ * arrives too late and the alias keeps the light value. Measured while writing this commit:
+ * `--bg` correctly became #0d0a26 inside `.dark` while `--background: var(--bg)` stayed #ffffff.
+ *
+ * Declaring the block against `:root, .dark` makes the aliases re-resolve in each context. The
+ * design-system export hits the same trap and fixes it the same way, with `:root,[data-theme]`.
+ *
+ * Consequence for anyone adding a token: a role goes in `:root` and is overridden in `.dark`; an
+ * ALIAS of a role goes here. Putting an alias in `:root` alone is the bug above, and it is silent.
+ */
+:root,
+.dark {
+  /* ---- Semantic layer -------------------------------------------------------------------------
+   * shadcn's token names, so the `C-17` primitives re-skin without edits. Each now aliases a
+   * design-system role above; the resolved values are unchanged.
+   */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card-foreground: var(--ink);
+  --popover: var(--card);
+  --popover-foreground: var(--ink);
+  --primary: var(--accent-fill);
+  --primary-foreground: var(--accent-on-accent);
+  --secondary-foreground: var(--ink);
+  --muted: var(--sur);
+  --muted-foreground: var(--ink-2);
+  /* `accent` is shadcn's *hover* surface (`hover:bg-accent` on ghost and outline buttons, select
+   * and accordion rows), not the brand accent the name suggests. The saturated #2f249b belongs to
+   * `ring` and to `brand-700` for links — mapping it here turns every ghost-button hover into a
+   * solid indigo block. Checked against the ported primitives: bg-accent and bg-accent/50 appear
+   * only in hover and selected states. Which is exactly why it takes `--mut`. */
+  --accent: var(--mut);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-on-danger);
+  --success: var(--success-ink);
+  --success-foreground: var(--jh-white);
+  --success-muted: var(--success-surface);
+  --border: var(--line);
+  --input: var(--line);
+  --placeholder: var(--ink-3);
 }
 
 @theme inline {
