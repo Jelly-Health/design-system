@@ -1,4 +1,11 @@
 export { cn } from "./lib/utils";
 
-/* Components are deliberately absent until the design pass defines them —
- * see src/styles/tokens.css and README.md § "What is not here yet". */
+/* The 19 primitives, extracted from `web-app/v2/components/ui/` by JH207.
+ *
+ * Importing from the package root pulls the whole set into the module graph. Most of them are
+ * Radix-backed and Radix ships its own `"use client"`, so a Server Component that imports from
+ * here can be pushed across the client boundary by a component it never named. When that matters,
+ * import the subpath instead — `@jelly-health/design-system/ui/button` — which is exported for
+ * exactly this reason. See README § "Importing a primitive".
+ */
+export * from "./components/ui";
