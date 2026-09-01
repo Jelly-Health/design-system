@@ -24,6 +24,10 @@ Checks the things a rendered page cannot tell you:
   5. ccmp/mark survive, because Latin Extended is kept and without them a
      stacked diacritic mispositions rather than failing visibly
   6. each slice actually covers the characters its range promises
+  7. src/fonts/next-font/ -- the undivided Latin+Ext files for a consumer that
+     cannot apply a per-file unicode-range (next/font/local; see subset-fonts.sh)
+     -- carries the same axes/feature/coverage bar as the two split slices
+     combined, since one file now has to stand in for both
 
 Exits non-zero on any failure, so CI can run it.
 
@@ -64,7 +68,8 @@ FIGURE_FEATURES = {
     "tnum": "tokens.css --numeric-console: tabular-nums",
     "pnum": "tokens.css --numeric-member: proportional-nums",
 }
-HAS_DIGITS = "latin"
+# next-font/'s combined file also carries the latin range, so it has digits too.
+HAS_DIGITS = ("latin", "combined")
 
 # Characters each slice promises. Latin Extended is sampled from real name
 # orthographies -- French, Spanish, Polish, Czech, Turkish, Romanian, Hungarian
@@ -73,6 +78,8 @@ SAMPLES = {
     "latin": "AaZz09éñüçßıœ€£–—'\"…",
     "ext": "łżćšČžğșțőűā",
 }
+# The next-font/ combined file must cover both ranges in one file.
+SAMPLES["combined"] = SAMPLES["latin"] + SAMPLES["ext"]
 
 failures: list[str] = []
 
@@ -138,7 +145,7 @@ def check_font(path: Path, *, variable: bool, sample_key: str | None,
 
     if sample_key:
         expected = dict(REQUIRED_FEATURES)
-        if sample_key == HAS_DIGITS:
+        if sample_key in HAS_DIGITS:
             expected.update(FIGURE_FEATURES)
         for feat, why in expected.items():
             if feat not in features:
@@ -173,6 +180,25 @@ for face in ("InterVariable", "InterVariable-Italic"):
         )
 for weight in (400, 500):
     check_font(ROOT / f"src/fonts/IBMPlexMono-{weight}.woff2", variable=False, sample_key=None)
+
+print("\nnext-font consumers (src/fonts/next-font/):")
+NEXT_FONT_DIR = ROOT / "src/fonts/next-font"
+NEXT_FONT_FACES = ("InterVariable", "InterVariable-Italic")
+for face in NEXT_FONT_FACES:
+    check_font(
+        NEXT_FONT_DIR / f"{face}.woff2",
+        variable=True,
+        sample_key="combined",
+        expect_italic="Italic" in face,
+    )
+# Nothing may ship here that the two faces above don't account for -- same
+# dead-file principle as #1b, just against a fixed expected set instead of a
+# stylesheet, since these files have no CSS to be referenced by.
+if NEXT_FONT_DIR.exists():
+    expected_next_font = {f"{face}.woff2" for face in NEXT_FONT_FACES}
+    for f in sorted(NEXT_FONT_DIR.glob("*.woff2")):
+        if f.name not in expected_next_font:
+            failures.append(f"src/fonts/next-font/{f.name} ships but is not one of {sorted(expected_next_font)}")
 
 css = FONTS_CSS.read_text()
 referenced = set(re.findall(r'url\("\.\./fonts/([^"]+)"\)', css))

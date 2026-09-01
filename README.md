@@ -94,6 +94,16 @@ their design", and connecting them to the designed vocabulary is a real design d
   outright — measured on `Jelly-Health/website`: performance 0.97 → 0.85 against a 0.90 floor, LCP
   2.1s → 3.8s against a 2500ms budget. Subsetting to one Latin+Ext file was **not enough** (median
   LCP 2562ms, still failing); the `unicode-range` split is what brought it to 2048ms.
+- **Added 2026-09-01: `src/fonts/next-font/` — an undivided Latin+Ext file per Inter face, for a
+  consumer that cannot apply the split above.** `next/font/local` (verified against Next 16.0.10)
+  applies one `declarations` array to every `src` entry in a call, so it has no way to give two files
+  of the same face two different `unicode-range`s — `web-app/v2` hits this because its literal `src`
+  paths are statically analysed at build time and can't route through `fonts.css`. These consumers get
+  154,540 bytes per face (57% off the 352,240-byte original) instead of the 67KB-for-English number
+  above; `scripts/subset-fonts.sh` generates them from the same source in the same run, and
+  `scripts/verify-fonts.py` holds them to the same axis/feature/coverage bar, checked against both
+  ranges combined since one file now stands in for both slices. Not referenced by `fonts.css` on
+  purpose — see the comment in `scripts/subset-fonts.sh`.
 - **The legacy `--jh-*` brand ramp is deprecated but still shipped.** 22 live call sites in `v2`
   (`brand-300` ×19, `brand-700` ×2, `brand-025` ×1). It is re-pointed onto roles so those sites stay
   on-palette; it should shrink to nothing as they are touched.

@@ -4,6 +4,18 @@
 # into a `latin` and a `latin-ext` slice, and src/styles/fonts.css gives each one
 # a `unicode-range` so the browser downloads only the slices a page really uses.
 #
+# Also emits TWO more files, into src/fonts/next-font/ -- a Latin+Ext file per
+# face, undivided. This is for a consumer that cannot do the split: Next.js's
+# `next/font/local` applies one `declarations` array to every `src` entry in a
+# call, so it has no way to give two files of the same face two different
+# `unicode-range`s (verified against installed next@16.0.10,
+# node_modules/next/dist/compiled/@next/font/dist/local/loader.js). Those
+# consumers get the 56%-off answer (154,540 bytes measured) instead of the
+# per-page-language 81%-off answer fonts.css gets -- see JH213 in web-app.
+# `src/fonts/next-font/` is deliberately not `src/fonts/`: verify-fonts.py's
+# dead-file check would otherwise demand fonts.css reference these too, which
+# would put the big file back in front of every CSS consumer.
+#
 # WHY THIS EXISTS
 # ---------------
 # The unsubsetted faces broke a consumer's performance budget. Measured on
@@ -80,8 +92,11 @@ U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"
 # this slip.
 FEATURES='ccmp,kern,liga,clig,calt,rlig,locl,tnum,pnum,mark,mkmk'
 
+mkdir -p src/fonts/next-font
+
 total_before=0
 total_latin=0
+total_combined=0
 
 for face in InterVariable InterVariable-Italic; do
   src="fonts-src/${face}.woff2"
@@ -111,6 +126,22 @@ for face in InterVariable InterVariable-Italic; do
     [ "$slice" = latin ] && total_latin=$((total_latin + after))
     printf '%-30s %8s bytes\n' "${face}-${slice}.woff2" "$after"
   done
+
+  # The undivided Latin+Ext file for next-font-local consumers -- one pyftsubset
+  # run over both ranges together, not a concatenation of the two slices above.
+  combined_out="src/fonts/next-font/${face}.woff2"
+  pyftsubset "$src" \
+    --output-file="$combined_out" \
+    --flavor=woff2 \
+    --layout-features="$FEATURES" \
+    --name-IDs='*' \
+    --name-legacy \
+    --name-languages='*' \
+    --unicodes="${LATIN},${LATIN_EXT}"
+
+  combined_after=$(wc -c < "$combined_out" | tr -d ' ')
+  total_combined=$((total_combined + combined_after))
+  printf '%-30s %8s bytes\n' "next-font/${face}.woff2" "$combined_after"
 done
 
 # The old undivided files, if a previous revision left them behind. Leaving one
@@ -120,5 +151,7 @@ rm -f src/fonts/InterVariable.woff2 src/fonts/InterVariable-Italic.woff2
 echo
 printf 'sources %s bytes -> %s bytes actually downloaded by a page of English (%d%% less)\n' \
   "$total_before" "$total_latin" "$(( 100 - (total_latin * 100 / total_before) ))"
+printf 'sources %s bytes -> %s bytes for a next/font/local consumer that cannot split (%d%% less)\n' \
+  "$total_before" "$total_combined" "$(( 100 - (total_combined * 100 / total_before) ))"
 echo
 echo "Now verify nothing load-bearing was trimmed:  python3 scripts/verify-fonts.py"
