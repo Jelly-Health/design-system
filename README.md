@@ -106,6 +106,14 @@ their design", and connecting them to the designed vocabulary is a real design d
   it is what currently blocks `Jelly-Health/website` from retyping its nav, CTAs and footer.
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
+- ~~**No wordmark.**~~ **Fixed 2026-09-01 (JH200).** `<Wordmark />` ships from the package root —
+  see § *The wordmark*. It has no live consumer yet: the legacy marketing footer is the only place
+  the full name renders today, and it is on the retired type system with no dependency on this
+  package, so wiring it in means bringing the whole token/font layer to a surface `JH188` W7
+  deletes within weeks — a larger, riskier change than this card asked for. `v2` has no full-name
+  render site (the console sidebar deliberately shows the short form, `Jelly`, sized for a 216px
+  rail), and `Jelly-Health/website` is mid-flight on `JH211`. Wire it in wherever a real screen
+  needs the full name next, rather than force a site now.
 
 ## Using it
 
@@ -216,6 +224,29 @@ do not assume Next tree-shakes the unused ones away.
 carries it, except `@radix-ui/react-slot` — and adding one anyway silently converts every Server
 Component that imports the barrel into a client one. This bit `web-app/v2` and is recorded so it
 does not get "fixed" as tidiness later.
+
+### The wordmark
+
+`jellyhealth` has never had an SVG or PNG logo — the name has always been live text, restyled
+independently on every screen that shows it. `<Wordmark />` is the first shared, correct version:
+typeset in Inter at `--weight-semibold` (590, the system's ceiling — there is no 700) and
+`--tracking-tight` (-0.012em), lowercase, exported from the package root:
+
+```tsx
+import { Wordmark } from "@jelly-health/design-system";
+
+// On a page surface — the default reading
+<Wordmark className="text-2xl text-accent-ink" />
+
+// Reversed on a filled surface — console header, dark footer, a share-card background
+<Wordmark className="text-2xl text-accent-on-accent bg-accent-fill px-3 py-1.5" />
+```
+
+Colour and size are deliberately **not** baked in. Colour inherits `currentColor`, so a consumer
+picks `text-accent-ink` (a page surface) or `text-accent-on-accent` (a filled one) — **not**
+`text-accent`/`bg-accent`, which is the shadcn-generic alias for `--mut`, a different role
+entirely (see the alias table above). Size is left to the consumer for the same reason a hero, a
+nav bar and a footer are not the same size.
 
 ---
 
