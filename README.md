@@ -178,6 +178,29 @@ Anything between those two steps is currently undesigned; see Known gaps.
 
 Decided 2026-09-01, [JH138](https://trello.com/c/9BYx5GAH).
 
+### Line-height is mapped, not derived
+
+Every size step above pairs with a named `--leading-*` value — `display` 1.05, `tight` 1.1, `snug`
+1.35, `normal` 1.5, `relaxed` 1.6. Size-driven: larger text reads relatively tighter.
+
+```
+2xs/sm      relaxed  1.6      xl          snug     1.35
+base/md/lg  normal   1.5      2xl/3xl     tight    1.1
+                               4xl/5xl/6xl display  1.05
+--text-member-body  relaxed  1.6   (same 16px as console `lg`, different leading — "member
+                                     airy" is the reason the token exists at all)
+--text-h1            display  1.05
+```
+
+Without this pairing Tailwind supplies its own default — a ratio computed against **Tailwind's**
+font size for that name, not ours. `text-console-lg` inherited a 1.556 ratio derived for stock 18px
+while rendering at our 16px; nobody chose that, it was just what was left over.
+`scripts/verify-type-ramp.py` fails the build if a step is missing a pairing, or if the pairing is a
+bare number instead of a named `--leading-*` token — a number with no name attached is a decision
+nobody can find the reasoning for later.
+
+Decided 2026-09-01, [JH215](https://trello.com/c/tZxTAeXf).
+
 **Two ways to load the fonts — pick by whether you can express `unicode-range`.**
 
 | | Files | Who |

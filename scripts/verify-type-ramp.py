@@ -30,6 +30,14 @@ Checks:
      and not to a decision
   5. the member and display tokens survive, because they are the entire reason
      a surface can opt out of console density
+  6. every console/member/display step pairs with a `--text-<step>--line-height`
+     that references one of the named `--leading-*` tokens. Without a pair,
+     Tailwind supplies its own default -- a ratio computed against TAILWIND'S
+     font size for that name, not ours, e.g. `text-console-lg` inheriting a
+     1.556 ratio derived for Tailwind's stock 18px while rendering at our 16px.
+     A bare number (`1.5` instead of `var(--leading-normal)`) passes the same
+     failure mode through a second door, so it is rejected too -- the point is
+     naming a leading decision, not just having a number.
 
 Comments are stripped before scanning: tokens.css deliberately discusses
 `--text-sm` in prose to explain the rule, and a checker that cannot tell prose
@@ -48,6 +56,8 @@ each run:
   * deleting the `--text-console-md` alias from `@theme inline`     (check 3)
   * changing a primitive's `text-console-sm` back to `text-sm`      (check 4)
   * deleting `--text-member-body`                                   (check 5)
+  * deleting `--text-console-lg--line-height` from `@theme inline`   (check 6)
+  * hardcoding `--text-console-lg--line-height: 1.5;`                (check 6)
 
 A guard that has never failed is not evidence.
 """
@@ -149,6 +159,30 @@ def main() -> int:
                 f"of console density; without it there is nothing to opt into."
             )
 
+    # 6. every step that has a size also has a leading, and it names a
+    # `--leading-*` decision rather than a bare ratio Tailwind would supply
+    # anyway or a hand-picked number nobody can find the reasoning for.
+    leading_steps = [f"--text-console-{step}" for step in CONSOLE] + REQUIRED_SEMANTIC
+    for tok in leading_steps:
+        pair_re = rf"{re.escape(tok)}--line-height\s*:\s*([^;]+);"
+        m = re.search(pair_re, theme)
+        if m is None:
+            failures.append(
+                f"tokens.css @theme inline: `{tok}--line-height` is missing. "
+                f"Without it Tailwind pairs `{tok}` with a default ratio "
+                f"computed against Tailwind's own font size for that name, "
+                f"which is meaningless once the size is ours."
+            )
+            continue
+        value = m.group(1).strip()
+        if not re.fullmatch(r"var\(--leading-[a-z]+\)", value):
+            failures.append(
+                f"tokens.css @theme inline: `{tok}--line-height: {value}` "
+                f"does not reference a named `--leading-*` token. A bare "
+                f"number is a leading decision made with no name attached to "
+                f"it and no way to tell it apart from a typo."
+            )
+
     if failures:
         print(f"FAIL: {len(failures)} type-ramp violation(s)\n", file=sys.stderr)
         for f in failures:
@@ -157,7 +191,8 @@ def main() -> int:
 
     print(
         f"OK: no generic Tailwind size name is bound; console ramp complete "
-        f"({len(CONSOLE)} steps); {len(REQUIRED_SEMANTIC)} semantic tokens present."
+        f"({len(CONSOLE)} steps); {len(REQUIRED_SEMANTIC)} semantic tokens "
+        f"present; {len(leading_steps)} steps paired with a named leading."
     )
     return 0
 
