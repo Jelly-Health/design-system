@@ -1,28 +1,18 @@
 # `@jelly-health/design-system`
 
-> # 🔴 Read this before building anything here
+> # ✅ The extraction has landed
 >
-> **This package is a stub awaiting extraction, not a source of truth.** It was created 2026-08-30
-> on the belief that no design system existed. That was wrong — it was written from a checkout **147
-> commits behind `origin/main`**.
+> **`src/styles/tokens.css` is now the source of truth for colour and radius.** Extracted
+> 2026-08-31 (JH206) from `web-app` `origin/main:v2/app/globals.css`, values verbatim — 115
+> declarations, diffed to confirm nothing changed in the move.
 >
-> **The real design system already lives in `web-app/v2`** and has since 2026-08-24:
-> `v2/app/globals.css` (a documented token layer with a measured dark palette), 19 `components/ui/`
-> primitives, both fonts self-hosted, and a `/v2/design-system` showcase page. Cards `C-02`, `C-17`
-> and `C-18` — all Done and merged.
+> The file this replaces was hand-transcribed on 2026-08-30 from a checkout 147 commits behind
+> `origin/main`, carried older canvas values, and was marked "do not build against it". That notice
+> is now obsolete and this replaces it.
 >
-> **The plan is to extract that into this package**, not to build a second system here. The tokens in
-> `src/styles/tokens.css` below are hand-transcribed and **inferior to v2's** — v2's record how many
-> times each value appears in the canvases and in what CSS role, and its dark values carry measured
-> WCAG ratios. Do not build against this file; it is replaced by the extraction.
->
-> Tracking: [JH206](https://trello.com/c/8IVqteek) (tokens) · [JH207](https://trello.com/c/aso7xYid)
-> (primitives) · [JH210](https://trello.com/c/uzoGmmd5) (point v2 at the package).
-> Plan: `~/agent-artifacts/jellyhealth/design-system/02-TASK-BREAKDOWN.md`.
->
-> **Extract at unchanged values first and prove v2 still renders**, then change anything. v2 has live
-> console work built on the current tokens.
-
+> **What changed in the move: nothing.** The commit is deliberately inert — same values, new home —
+> so that a rendering failure here can only be a plumbing failure, never a design change. The design
+> pass's values, and the type, spacing, shape and motion scales, arrive in a later commit.
 
 Design tokens and components shared by **`Jelly-Health/website`** (marketing) and
 **`web-app/v2`** (the patient app and clinical console).
@@ -66,34 +56,33 @@ it does not get re-litigated as though nobody had thought about it.
 - `cn()`, so a component from this package and a component written in an app resolve class conflicts
   identically.
 
-## What is not here yet — and why that is deliberate
+## What landed, and what is still absent
 
-**No type scale. No spacing scale. No radius scale. No warm/member palette roles. No components.**
+**Type, spacing, shape and motion scales are now here.** They were withheld until the design pass
+produced them — a plausible guess written earlier would have become the system by default. The pass
+shipped as `jh-design-system-v10` and JH206 commit 3 brought all four in, along with the designed
+colour values.
 
-These are JH138 checklist items 1.2–1.4 and 2, and they are **design decisions, not transcription.**
-A plausible guess written here would become the system by default — every screen built against it
-inherits it, and the designer arrives to find the question already answered. That is the mechanism that
-produced v1's 157 hardcoded colours.
+| | State |
+|---|---|
+| Colour | 25 roles, both themes. 150 contrast pairs recomputed from the values in this file: **0 failures**, 7 within 0.15 of their floor and marked `tight` |
+| Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590, 11-step size ramp, negative tracking scaled to size |
+| Spacing | 8px base, 9 steps plus named surface paddings and a 44px member touch floor |
+| Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px ceiling — plus one floating-layer shadow |
+| Motion | 100/120/200ms, one easing curve, focus-ring geometry |
 
-The measured state of each, as of 2026-08-30:
+**Still absent: components.** `src/index.ts` exports `cn` and nothing else. That is JH207.
 
-| | Found in the canvases | Meaning |
-|---|---|---|
-| Type | **32 distinct sizes**, incl. half-pixels (`12.5px`, `11.5px`, `13.5px`) | Hand-nudged, not a scale |
-| Spacing | **20 distinct `gap` values** — 6/7/8/9/10px all in use | Five neighbouring values doing one job |
-| Radius | **19 distinct radii** | An 8/12/16 cluster with noise around it |
-| Warm palette | cream `#faf7f2`, peach `#ecdfd7`, success `#00793e` | In use, **no role name, no dark value** |
+### Known gaps, recorded rather than hidden
 
-They land here when the design pass produces them.
-
-### One thing in here is a stopgap, not a decision
-
-`--color-ink3` has **no dark value in the canvases.** `tokens.css` sets it to `ink2`'s dark value so
-nothing renders invisible — which collapses muted text into secondary text, and `#9691b8` is
-simultaneously `--color-line` in dark. A text tone and a border tone sharing one value needs a measured
-contrast ratio, not an assertion. Flagged in the file itself; do not read it as settled.
-
----
+- **Font payload grew by ~509KB.** Inter Variable (352KB) plus its italic (388KB) against the four
+  Overused Grotesk faces (251KB) it replaced. The italic is used in exactly two places, both
+  empty-state labels. Neither file is subsetted; subsetting to Latin is the fix and has not been done.
+- **The legacy `--jh-*` brand ramp is deprecated but still shipped.** 22 live call sites in `v2`
+  (`brand-300` ×19, `brand-700` ×2, `brand-025` ×1). It is re-pointed onto roles so those sites stay
+  on-palette; it should shrink to nothing as they are touched.
+- **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
+  is bound up with the release-process decision that is still open.
 
 ## Using it
 

@@ -1,80 +1,444 @@
-/* Jelly Health 2.0 — design tokens
+/* Jelly Health — design tokens
  *
- * 🔴 PROVISIONAL — SUPERSEDED BY web-app/v2. See README.md's notice.
- *   The real token layer is `v2/app/globals.css` on origin/main: same palette, but each value
- *   records its occurrence count and CSS role in the canvases, the dark values carry measured WCAG
- *   ratios, and a radius scale is already chosen (--radius: 0.75rem). This file is hand-transcribed
- *   and is the extraction TARGET, not the source. Do not build against it. — 2026-08-30
+ * Source of truth for colour, type, spacing, shape and motion across `Jelly-Health/website` and
+ * `web-app/v2`.
  *
- * ┌─────────────────────────────────────────────────────────────────────────┐
- * │ WHAT IS IN THIS FILE, AND WHAT IS DELIBERATELY NOT                      │
- * │                                                                          │
- * │ SETTLED — transcribed from the v9 design canvases, not invented here.    │
- * │   The 11 semantic colour roles, bound light and dark.                    │
- * │                                                                          │
- * │ ABSENT ON PURPOSE — type scale, spacing scale, radius scale, and the     │
- * │   warm/member palette roles. These are JH138 checklist items 1.2–1.4     │
- * │   and they are DESIGN decisions. Writing a guess here would make the     │
- * │   guess the system: every screen built against it inherits it, and the   │
- * │   designer arrives to find the question already answered. That is        │
- * │   exactly how v1 ended up with colour hardcoded in 157 places.           │
- * │                                                                          │
- * │   They land here when the design pass produces them. Not before.         │
- * └─────────────────────────────────────────────────────────────────────────┘
+ * ── Provenance ───────────────────────────────────────────────────────────────────────────────
+ * JH206, three commits:
+ *   1. extracted verbatim from `origin/main:v2/app/globals.css` — 115 declarations, 0 drift
+ *   2. added the design-system role layer at unchanged values — 26 tokens compared, 0 drift
+ *   3. this one: the design pass's values (`jh-design-system-v10`) plus the type, spacing, shape
+ *      and motion scales the package deliberately withheld until the design existed
  *
- * `@theme static`, not the bare form: Tailwind v4 emits a theme variable only
- * when a generated utility references it, so a token used only as a
- * hand-authored var(--color-*) is silently pruned from the build — identically
- * in dev and prod. `static` forces every token below into the output. The
- * website repo hit this already; keep it.
+ * Contrast was recomputed independently from the values below rather than read from any committed
+ * table: every foreground role against every surface it can land on, both themes. 0 failures.
+ * Seven pairs sit within 0.15 of their floor and are marked `tight` where they appear.
  *
- * Dark mode uses the `.dark` class variant, matching the website's existing
- * `@custom-variant dark (&:is(.dark *))`.
+ * ── Structure: three layers, and the reason for each ─────────────────────────────────────────
+ *   :root          roles — real values. Overridden in `.dark`.
+ *   .dark          role overrides only.
+ *   :root, .dark   aliases — the shadcn names, and the legacy brand ramp, pointing at roles.
+ *   @theme inline  Tailwind's utility surface.
+ *
+ * ⚠️ A role goes in `:root` and is overridden in `.dark`. An ALIAS of a role goes in the dual
+ * block. Putting an alias in `:root` alone is a silent bug: `var()` substitutes at computed-value
+ * time, so the alias resolves against `:root`'s value and inherits that result downward — the
+ * `.dark` override underneath arrives too late. Measured while writing commit 2: `--bg` correctly
+ * became the dark value inside `.dark` while `--background: var(--bg)` stayed light. The
+ * design-system export hits the same trap and fixes it the same way, with `:root,[data-theme]`.
+ *
+ * The corollary bit twice: `--card`, `--ring` and `--secondary` are design-system names that are
+ * also shadcn names. They are roles, so they live in `:root` — never repeated in the alias block,
+ * which comes later and would win and cancel the dark override.
+ *
+ * ── Dark ─────────────────────────────────────────────────────────────────────────────────────
+ * `.dark` class variant, not `prefers-color-scheme` and not `[data-theme]`. Both consuming repos
+ * bind it this way; the design-system export's attribute form is an alias, not the source.
  */
 
-@theme static {
-  /* ── Colour roles ────────────────────────────────────────────────────────
-   * Names are the canvases' own, kept verbatim. They are terse and
-   * console-derived, and a "better" name here would mean the design and the
-   * code speak different languages — which is the drift this package exists
-   * to prevent. Source: v7 A1–A5, v7 B, v8 C.
+:root {
+  /* ---- Surfaces ------------------------------------------------------------------------------
+   * Warm paper, four steps plus a hover whisper. Not pure white: `--card` is #FEFDFC, because a
+   * pure-white raised card is the one cold surface in a warm system.
    */
-  --color-bg: #ffffff;      /* page ground */
-  --color-sur: #fbfbfd;     /* raised surface */
-  --color-card: #ffffff;    /* card fill */
-  --color-ink: #1c1468;     /* primary text */
-  --color-ink2: #494383;    /* secondary text */
-  --color-ink3: #9691b8;    /* muted text */
-  --color-mut: #f4f4fb;     /* muted fill */
-  --color-line: #e2e0ef;    /* hairline border */
-  --color-ring: #2f249b;    /* focus ring */
-  --color-dang: #b42318;    /* destructive */
-  --color-accink: #2f249b;  /* accent text/fill */
+  --bg: #FBFAF7;              /* page ground */
+  --sur: #F4F2ED;             /* recessed: sidebars, section headers */
+  --card: #FEFDFC;            /* raised — the one surface lighter than the page */
+  --mut-soft: #F7F5F1;        /* HOVER. A whisper. */
+  --mut: #EDEAE3;             /* SELECTED / held. Not "muted" — see the alias block. */
 
-  --font-sans: "Overused Grotesk", ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* ---- Boundaries: two roles, and the difference is load-bearing -----------------------------
+   * `--line` SEPARATES and is exempt from 3:1 by intent. `--line-strong` BOUNDS — anything a user
+   * must see the edge of — and meets 3:1, which is a NON-TEXT threshold. Never use `--line-strong`
+   * (or `--pending-rule`, same value) as a text colour: it fails 4.5:1.
+   */
+  --line: #DDD8CD;
+  --line-strong: #8A8577;     /* tight: 3.07 on --mut, 3.14 on --voice-provider */
+
+  /* ---- Ink: three steps, all clearing 4.5:1 on every surface they land on --------------------- */
+  --ink: #201C18;             /* primary */
+  --ink-2: #534E49;           /* secondary: supporting prose, metadata with meaning */
+  --ink-3: #6B655F;           /* tertiary: labels, timestamps. Quiet, never unreadable. */
+
+  /* ---- Accent: one loud colour, four roles with different contrast requirements --------------- */
+  --accent-fill: #2C2A66;     /* filled accent surfaces: primary button, member bubble */
+  --accent-ink: #35327A;      /* the accent AS TEXT on a page surface */
+  --accent-on-accent: #FBFAF7;/* text/icon sitting on --accent-fill */
+  --ring: #4A44C0;            /* focus ring on page surfaces */
+  --ring-on-accent: #FBFAF7;  /* the inverse ring: --ring on --accent-fill measures 1.77 */
+
+  /* ---- Semantic: state, never severity -------------------------------------------------------
+   * There is no warning tier and no severity ramp. A row flagged twice renders like a row flagged
+   * once — see the flat-flags rule in the design system's readme.
+   */
+  --danger: #8C2A1D;
+  --danger-surface: #F6E9E5;
+  --danger-on-danger: #FBFAF7;
+  --success-ink: #1E5A39;     /* only for a fact that already happened: delivered, recorded */
+  --success-surface: #E7EFE8;
+
+  /* ---- Clinical: the most important role in the system ---------------------------------------
+   * The rule under a "___" awaiting clinician sign-off. Deliberately the same value as
+   * `--line-strong`: a pending clinical value is a BOUNDARY, not a warning. It must never read as
+   * an error, and never as missing data. Reserved for clinical values — never a price.
+   */
+  --pending-rule: #8A8577;
+
+  /* ---- Voice: who is speaking. The product's central distinction. -----------------------------
+   * A voice whose fill step against its surface is under 3 dL* takes `--line-strong` as its edge,
+   * because `--line` cannot delimit a bubble that has no fill difference.
+   */
+  --voice-provider: #F3ECE3;          /* the physician. The one warm fill in the system. */
+  --voice-coordinator: #F8F4EC;       /* named support staff. Warm, lighter than the physician. */
+  --voice-on-member: #FBFAF7;
+  /* `--voice-system` and `--voice-member` are ALIASES of --card and --accent-fill, so they live in
+   * the dual block below, not here. Declared here they would keep the light value inside `.dark` —
+   * which is exactly what the structure note warns about, and what the first run of this commit
+   * did. */
+
+  /* ---- Roles that are also shadcn names — declared here, never in the alias block ------------- */
+  --secondary: #EDEAE3;
+
+  /* ══ Type ════════════════════════════════════════════════════════════════════════════════════
+   * Single family. Source Serif 4 was retired in the design pass — this is a grotesk system with
+   * mono for identifiers.
+   *
+   * ⚠️ 510 and 590 are NOT standard weights. They exist only on Inter's variable axis; a static
+   * face rounds them to 500 and 600, which passes review and is wrong. See fonts.css.
+   */
+  --font-text: InterVariable, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-text);
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+  --weight-light: 300;        /* display only, never below 24px, never on a clinical value */
+  --weight-regular: 400;
+  --weight-medium: 510;
+  --weight-semibold: 590;     /* the ceiling. There is no 700 in this system. */
+
+  --text-2xs: 10px;
+  --text-sm: 12px;
+  --text-base: 13px;          /* console primary */
+  --text-md: 15px;
+  --text-lg: 16px;            /* MEMBER BODY FLOOR — the audience straddles presbyopia onset */
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+  --text-4xl: 48px;
+  --text-5xl: 64px;
+  --text-6xl: 72px;
+  --text-member-body: var(--text-lg);
+
+  /* Negative, scaled to size. Positive tracking survives on uppercase micro-labels only
+   * (`--tracking-micro`) — uppercase always needs it, and that is the one place the rule inverts. */
+  --tracking-display-lg: -0.022em;   /* 48px and up */
+  --tracking-display: -0.012em;      /* 20–32px */
+  --tracking-body-15: -0.011em;      /* 15px */
+  --tracking-body: -0.010em;         /* 13–16px */
+  --tracking-tight: -0.012em;
+  --tracking-normal: 0;
+  --tracking-micro: 0.09em;
+  --tracking-mono: -0.013em;
+
+  --leading-display: 1.05;
+  --leading-tight: 1.1;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.6;
+  --leading-mono: 1.45;
+
+  --numeric-console: tabular-nums;
+  --numeric-member: proportional-nums;
+  --measure: 62ch;
+
+  /* ══ Spacing ═════════════════════════════════════════════════════════════════════════════════ */
+  --space-0: 0;
+  --space-half: 4px;          /* optical only — never for layout */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 48px;
+  --space-6: 64px;
+  --space-7: 96px;
+  --space-8: 128px;
+
+  --pad-console-row: 8px 14px;
+  --pad-console-panel: 16px 18px;
+  --pad-member-screen: 24px 22px;
+  --gap-console-thread: 11px;
+  --gap-member-thread: 18px;
+  --touch-min: 44px;          /* member floor. Non-negotiable. */
+
+  /* ══ Shape ═══════════════════════════════════════════════════════════════════════════════════
+   * Split vocabulary: a card and a button do not share a radius. 12px is the ceiling.
+   */
+  --radius-xs: 2px;
+  --radius-badge: 4px;
+  --radius: 6px;              /* buttons, inputs */
+  --radius-lg: 12px;          /* cards, panels, dialogs */
+  --radius-pill: 999px;       /* chips and badges only */
+  --radius-round: 50%;        /* avatars, the composer send button, the switch knob */
+  --radius-bubble: 14px;
+  --radius-bubble-tail: 4px;
+
+  --hairline: 1px;
+  --flag-marker: 3px;         /* the queue row's flag rule. Flat: twice-flagged looks the same. */
+  --rule-emphasis: 2px;
+  --row-console: calc(var(--space-4) + var(--space-1));   /* 40px, fixed regardless of row state */
+
+  --device-bezel: 40px;       /* device chrome, NOT component shape. Never use on a component. */
+  --device-screen: 32px;
+
+  /* Elevation is for FLOATING LAYERS ONLY — popover, menu, command palette, dialog, toast,
+   * tooltip — and each keeps its `--line-strong` hairline; the shadow supplements the boundary, it
+   * does not replace it. Static surfaces (cards, rows, panels, bubbles, inputs) get a surface step
+   * and a hairline, never a shadow. */
+  --shadow-float: 0 4px 32px rgba(26, 27, 46, .28);
+  --scrim: rgba(26, 27, 46, .5);
+  --scrim-blur: 3px;
+
+  /* ══ Motion ══════════════════════════════════════════════════════════════════════════════════
+   * Never transition a colour driven by a theme token: a theme swap is not an interaction, and it
+   * traps the property at a stale value. Transition opacity and geometry only.
+   */
+  --ring-width: 2px;
+  --ring-offset: 2px;
+  --ring-inset: 1.5px;
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  --duration-instant: 100ms;
+  --duration-fast: 120ms;
+  --duration-slow: 200ms;
+  --press-opacity: .9;
+
+  /* ══ Breakpoints ═════════════════════════════════════════════════════════════════════════════ */
+  --viewport-min: 360px;
+  --bp-console-collapse: 1280px;
+}
+
+/*
+ * `dark:` is bound to an explicit `.dark` ancestor. This is load-bearing, not a preference:
+ * Tailwind v4's default `dark:` is `prefers-color-scheme`, and the C-17 primitives carry `dark:`
+ * utilities. Binding to `.dark` keeps the theme under the app's control.
+ */
+@custom-variant dark (&:is(.dark *));
+
+.dark {
+  /* Near-black with a ~1–2 point blue tilt, and ~1.5% surface increments, so hairlines and type
+   * carry the structure rather than fills. Authored, not derived: a straight inversion of the warm
+   * paper palette fails contrast in several roles. */
+  --bg: #08090A;
+  --sur: #0F1011;
+  --card: #161718;
+  --mut-soft: #1C1E21;
+  --mut: #23252A;
+
+  --line: #23252A;
+  --line-strong: #6C6F76;     /* tight: 3.05 on --mut */
+
+  --ink: #F7F8F8;
+  --ink-2: #8A8F98;
+  --ink-3: #888C93;           /* tight: 4.54 on --mut. This is the floor — below it, it fails. */
+
+  --accent-fill: #655FDD;     /* tight: 3.09 on --mut */
+  --accent-ink: #B5AFFF;
+  --accent-on-accent: #F5F4F2;
+  --ring: #8A84FF;
+  --ring-on-accent: #F5F4F2;
+
+  --danger: #EE9384;          /* dark danger is a light salmon: it takes dark text, not light */
+  --danger-surface: #2A1A17;
+  --danger-on-danger: #0C0B0A;
+  --success-ink: #6FD3A2;
+  --success-surface: #12281C;
+
+  --pending-rule: #76716C;
+
+  --voice-provider: #251E19;  /* the physician stays warm in dark */
+  --voice-coordinator: #1F1A16;
+  --voice-on-member: #F5F4F2;
+
+  --secondary: #23252A;
+}
+
+/* ---- Aliases — declared for BOTH contexts, and that is load-bearing -----------------------------
+ * See the structure note at the top. An alias declared only in `:root` keeps the light value inside
+ * `.dark`, silently. This block re-resolves in each context.
+ */
+:root,
+.dark {
+  /* ---- shadcn's names, so the C-17 primitives re-skin without edits -------------------------
+   * ⚠️ TWO NAMES INVERT between the vocabularies. Mapping either by name similarity swaps
+   * selection with primary action, and the result looks plausible in review:
+   *
+   *   --mut          reads like `--muted`, but is the SELECTED/held state = shadcn's `--accent`.
+   *   --accent-fill  reads like `--accent`, but is the brand action fill = shadcn's `--primary`.
+   *
+   * v2's own note reached this from the other direction: `accent` is shadcn's *hover* surface
+   * (`hover:bg-accent` on ghost and outline buttons, select and accordion rows), not the brand
+   * accent the name suggests. Mapping the saturated indigo here turns every ghost-button hover
+   * into a solid block.
+   */
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card-foreground: var(--ink);
+  --popover: var(--card);
+  --popover-foreground: var(--ink);
+  --primary: var(--accent-fill);
+  --primary-foreground: var(--accent-on-accent);
+  --secondary-foreground: var(--ink);
+  --muted: var(--sur);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--mut);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-on-danger);
+  --success: var(--success-ink);
+  --success-foreground: var(--danger-on-danger);
+  --success-muted: var(--success-surface);
+  --border: var(--line);
+  --input: var(--line-strong);   /* an input edge is a BOUNDARY the user must perceive */
+  --placeholder: var(--ink-3);
+
+  --sidebar: var(--sur);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--accent-fill);
+  --sidebar-primary-foreground: var(--accent-on-accent);
+  --sidebar-accent: var(--mut);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--ring);
+
+  /* Two voices are aliases by definition: jellyhealth stating a fact is the neutral voice and takes
+   * the card surface; the member's own words are the accent fill. Both must re-resolve per theme. */
+  --voice-system: var(--card);
+  --voice-member: var(--accent-fill);
+
+  /* ---- Legacy brand ramp — DEPRECATED, kept because it is still referenced -------------------
+   * 22 live uses in v2 (`brand-300` ×19, `brand-700` ×2, `brand-025` ×1). Deleting it would break
+   * them; leaving it at the old hexes would put two different indigos on screen at once. So it is
+   * re-pointed onto roles: existing call sites keep working, land on-palette, and now follow the
+   * theme instead of pinning a light-mode value into dark.
+   *
+   * Reach for the semantic names. This ramp should shrink to nothing as those 22 sites are touched.
+   * `--jh-gold-500` is NOT here: it was annotation chrome in the canvases, not brand — 0 uses in v2.
+   */
+  --jh-indigo-900: var(--accent-fill);
+  --jh-indigo-700: var(--accent-ink);
+  --jh-indigo-500: var(--ink-2);
+  --jh-indigo-300: var(--ink-3);
+  --jh-indigo-100: var(--line);
+  --jh-indigo-050: var(--mut);
+  --jh-indigo-025: var(--sur);
+  --jh-sand-200: var(--voice-provider);
+  --jh-sand-050: var(--voice-coordinator);
+  --jh-red-600: var(--danger);
+  --jh-green-700: var(--success-ink);
+  --jh-green-100: var(--success-surface);
+  --jh-white: #FFFFFF;
 }
 
 .dark {
-  --color-bg: #0d0a26;
-  --color-sur: #241d68;
-  --color-card: #241d68;
-  --color-ink: #fbfbfd;
-  --color-ink2: #9691b8;
+  /* Floating-layer elevation, tinted with the ground rather than pure black. */
+  --shadow-float: 0 4px 32px rgba(8, 9, 10, .68);
+  --scrim: rgba(0, 0, 0, .62);
+}
 
-  /* 🔴 UNRESOLVED — JH138 item 1.2. The canvases bind no dark value for ink3.
-   * It is set to ink2's dark value here so nothing renders invisible, which is
-   * a STOPGAP, not a decision: it collapses the muted-text tone into the
-   * secondary-text tone, so the two are indistinguishable in dark.
-   *
-   * Compounding it, #9691b8 is simultaneously --color-line in dark below. A
-   * text tone and a border tone sharing one value is a contrast problem that
-   * needs measuring, not asserting. Do not treat this line as settled. */
-  --color-ink3: #9691b8;
+@theme inline {
+  --font-sans: var(--font-text);
+  --font-mono: var(--font-mono);
 
-  --color-mut: #241d68;
-  --color-line: #9691b8;
-  --color-ring: #9691b8;
-  --color-dang: #ff9b8f;
-  --color-accink: #fbfbfd;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-placeholder: var(--placeholder);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* The design-system roles, addressable as utilities: `bg-sur`, `text-ink-2`, `border-line-strong`,
+   * `bg-voice-provider`. These are the names to reach for. */
+  --color-bg: var(--bg);
+  --color-sur: var(--sur);
+  --color-mut: var(--mut);
+  --color-mut-soft: var(--mut-soft);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent-fill: var(--accent-fill);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-on-accent: var(--accent-on-accent);
+  --color-ring-on-accent: var(--ring-on-accent);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-on-danger: var(--danger-on-danger);
+  --color-success-ink: var(--success-ink);
+  --color-success-surface: var(--success-surface);
+  --color-pending-rule: var(--pending-rule);
+  --color-voice-system: var(--voice-system);
+  --color-voice-provider: var(--voice-provider);
+  --color-voice-coordinator: var(--voice-coordinator);
+  --color-voice-member: var(--voice-member);
+  --color-voice-on-member: var(--voice-on-member);
+
+  /* Legacy ramp, still addressable as `bg-brand-*` for the 22 remaining call sites. */
+  --color-brand-900: var(--jh-indigo-900);
+  --color-brand-700: var(--jh-indigo-700);
+  --color-brand-500: var(--jh-indigo-500);
+  --color-brand-300: var(--jh-indigo-300);
+  --color-brand-100: var(--jh-indigo-100);
+  --color-brand-050: var(--jh-indigo-050);
+  --color-brand-025: var(--jh-indigo-025);
+  --color-sand-200: var(--jh-sand-200);
+  --color-sand-050: var(--jh-sand-050);
+
+  /* Radius is mapped DELIBERATELY, not derived by calc. shadcn's chain assumed one base value;
+   * this system has a split vocabulary — 6px on buttons and inputs, 12px on cards, 4px on badges —
+   * and a calc off a single base cannot express it. `xl` is capped at 12px on purpose: the
+   * reference is explicit that nothing above that belongs on a card or panel. */
+  --radius-sm: var(--radius-badge);   /*  4px */
+  --radius-md: var(--radius);         /*  6px — buttons, inputs */
+  --radius-lg: var(--radius-lg);      /* 12px — cards, panels */
+  --radius-xl: var(--radius-lg);      /* 12px — the ceiling */
+
+  --text-2xs: var(--text-2xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-md: var(--text-md);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-3xl: var(--text-3xl);
+  --text-4xl: var(--text-4xl);
+  --text-5xl: var(--text-5xl);
+  --text-6xl: var(--text-6xl);
+
+  --shadow-float: var(--shadow-float);
+  --ease-jh: var(--ease);
 }
