@@ -68,7 +68,7 @@ colour values.
 | | State |
 |---|---|
 | Colour | 25 roles, both themes. 150 contrast pairs recomputed from the values in this file: **0 failures**, 7 within 0.15 of their floor and marked `tight` |
-| Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590, 11-step size ramp, negative tracking scaled to size |
+| Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590, 11-step size ramp **under `--text-console-*`** (see [Type: sizes are prefixed](#type-sizes-are-prefixed-and-that-is-the-point)), negative tracking scaled to size |
 | Spacing | 8px base, 9 steps plus named surface paddings and a 44px member touch floor |
 | Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px ceiling — plus one floating-layer shadow |
 | Motion | 100/120/200ms, one easing curve, focus-ring geometry |
@@ -97,6 +97,13 @@ their design", and connecting them to the designed vocabulary is a real design d
 - **The legacy `--jh-*` brand ramp is deprecated but still shipped.** 22 live call sites in `v2`
   (`brand-300` ×19, `brand-700` ×2, `brand-025` ×1). It is re-pointed onto roles so those sites stay
   on-palette; it should shrink to nothing as they are touched.
+- **There is no member/marketing type ramp.** The size scale is console density under
+  `--text-console-*`; on the member side there is exactly one type token, `--text-member-body`
+  (16px), plus `--text-h1` for a marketing hero. A member or marketing surface therefore has no
+  designed step for anything between those two and falls back to Tailwind's stock ramp, which is
+  Tailwind's decision and not ours. Naming those steps needs new values, so it is a designer task
+  (`/design-sync`) rather than something to fill in — see rule 1. Raised 2026-09-01 from JH211;
+  it is what currently blocks `Jelly-Health/website` from retyping its nav, CTAs and footer.
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
 
@@ -131,6 +138,37 @@ const nextConfig = {
   transpilePackages: ["@jelly-health/design-system"],
 };
 ```
+
+### Type: sizes are prefixed, and that is the point
+
+**`text-sm` is Tailwind's 14px here, not ours.** Console density lives on its own names:
+
+```
+text-console-2xs  10px      text-console-xl   20px
+text-console-sm   12px      text-console-2xl  24px
+text-console-base 13px      text-console-3xl  32px
+text-console-md   15px      text-console-4xl  48px
+text-console-lg   16px      text-console-5xl  64px
+                            text-console-6xl  72px
+```
+
+There is no `text-console-xs`; the ramp steps 10 → 12 and "extra small" is `text-console-sm`.
+
+An earlier cut of `tokens.css` bound these values to Tailwind's own generic names, so adopting the
+package silently resized every `text-sm` a consumer had already written — no error, no warning,
+nothing to review against. On the marketing site that measured as nav links, both CTAs and the
+footer going 14px → 12px and the hero paragraph 18px → 16px, which put the most member-facing
+surface we have a quarter below the **member body floor** `tokens.css` itself declares. axe passed
+the whole time, because a small font is not a WCAG failure — which is exactly why this is a
+committed check and not a note. `scripts/verify-type-ramp.py` fails the build if any generic name
+is bound again, and it is mutation-tested against all five ways of doing it.
+
+**Member surfaces must opt out explicitly.** Use `--text-member-body` (16px) for body copy and
+`--text-h1` for a marketing hero — the one fluid step in the system,
+`clamp(2rem, 2.2vw + 1.35rem, 3.5rem)`, since the console sits at a 1280px floor and never scales.
+Anything between those two steps is currently undesigned; see Known gaps.
+
+Decided 2026-09-01, [JH138](https://trello.com/c/9BYx5GAH).
 
 **Two ways to load the fonts — pick by whether you can express `unicode-range`.**
 

@@ -1,0 +1,33 @@
+# The package has no build and no lockfile, so there is nothing to compile and
+# no install to cache. What it does have is two invariants that fail silently
+# in a browser -- a font subset that renders slightly wrong, and a type ramp
+# that resizes a consumer's existing text without an error. Both are checked
+# here because neither is visible in a diff or in a green a11y run.
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  type-ramp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # No dependencies: the ramp check reads CSS and TSX as text on purpose,
+      # so it cannot be broken by an install failing.
+      - run: python3 scripts/verify-type-ramp.py
+
+  fonts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install fonttools brotli
+      - run: python3 scripts/verify-fonts.py
