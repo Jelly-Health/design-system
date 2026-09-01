@@ -1,28 +1,18 @@
 # `@jelly-health/design-system`
 
-> # 🔴 Read this before building anything here
+> # ✅ The extraction has landed
 >
-> **This package is a stub awaiting extraction, not a source of truth.** It was created 2026-08-30
-> on the belief that no design system existed. That was wrong — it was written from a checkout **147
-> commits behind `origin/main`**.
+> **`src/styles/tokens.css` is now the source of truth for colour and radius.** Extracted
+> 2026-08-31 (JH206) from `web-app` `origin/main:v2/app/globals.css`, values verbatim — 115
+> declarations, diffed to confirm nothing changed in the move.
 >
-> **The real design system already lives in `web-app/v2`** and has since 2026-08-24:
-> `v2/app/globals.css` (a documented token layer with a measured dark palette), 19 `components/ui/`
-> primitives, both fonts self-hosted, and a `/v2/design-system` showcase page. Cards `C-02`, `C-17`
-> and `C-18` — all Done and merged.
+> The file this replaces was hand-transcribed on 2026-08-30 from a checkout 147 commits behind
+> `origin/main`, carried older canvas values, and was marked "do not build against it". That notice
+> is now obsolete and this replaces it.
 >
-> **The plan is to extract that into this package**, not to build a second system here. The tokens in
-> `src/styles/tokens.css` below are hand-transcribed and **inferior to v2's** — v2's record how many
-> times each value appears in the canvases and in what CSS role, and its dark values carry measured
-> WCAG ratios. Do not build against this file; it is replaced by the extraction.
->
-> Tracking: [JH206](https://trello.com/c/8IVqteek) (tokens) · [JH207](https://trello.com/c/aso7xYid)
-> (primitives) · [JH210](https://trello.com/c/uzoGmmd5) (point v2 at the package).
-> Plan: `~/agent-artifacts/jellyhealth/design-system/02-TASK-BREAKDOWN.md`.
->
-> **Extract at unchanged values first and prove v2 still renders**, then change anything. v2 has live
-> console work built on the current tokens.
-
+> **What changed in the move: nothing.** The commit is deliberately inert — same values, new home —
+> so that a rendering failure here can only be a plumbing failure, never a design change. The design
+> pass's values, and the type, spacing, shape and motion scales, arrive in a later commit.
 
 Design tokens and components shared by **`Jelly-Health/website`** (marketing) and
 **`web-app/v2`** (the patient app and clinical console).
@@ -85,6 +75,10 @@ The measured state of each, as of 2026-08-30:
 | Warm palette | cream `#faf7f2`, peach `#ecdfd7`, success `#00793e` | In use, **no role name, no dark value** |
 
 They land here when the design pass produces them.
+
+**Update 2026-08-31:** the design pass has now shipped (`jh-design-system-v10`) and produced all
+four. They arrive in a later JH206 commit, kept separate from this one so the extraction can be
+reviewed as plumbing before any value changes.
 
 ### One thing in here is a stopgap, not a decision
 

@@ -1,80 +1,237 @@
-/* Jelly Health 2.0 — design tokens
+/* Jelly Health — design tokens
  *
- * 🔴 PROVISIONAL — SUPERSEDED BY web-app/v2. See README.md's notice.
- *   The real token layer is `v2/app/globals.css` on origin/main: same palette, but each value
- *   records its occurrence count and CSS role in the canvases, the dark values carry measured WCAG
- *   ratios, and a radius scale is already chosen (--radius: 0.75rem). This file is hand-transcribed
- *   and is the extraction TARGET, not the source. Do not build against it. — 2026-08-30
+ * Source of truth for colour and radius across `Jelly-Health/website` and `web-app/v2`.
  *
- * ┌─────────────────────────────────────────────────────────────────────────┐
- * │ WHAT IS IN THIS FILE, AND WHAT IS DELIBERATELY NOT                      │
- * │                                                                          │
- * │ SETTLED — transcribed from the v9 design canvases, not invented here.    │
- * │   The 11 semantic colour roles, bound light and dark.                    │
- * │                                                                          │
- * │ ABSENT ON PURPOSE — type scale, spacing scale, radius scale, and the     │
- * │   warm/member palette roles. These are JH138 checklist items 1.2–1.4     │
- * │   and they are DESIGN decisions. Writing a guess here would make the     │
- * │   guess the system: every screen built against it inherits it, and the   │
- * │   designer arrives to find the question already answered. That is        │
- * │   exactly how v1 ended up with colour hardcoded in 157 places.           │
- * │                                                                          │
- * │   They land here when the design pass produces them. Not before.         │
- * └─────────────────────────────────────────────────────────────────────────┘
+ * ── Provenance ───────────────────────────────────────────────────────────────────────────────
+ * Extracted 2026-08-31 from `web-app` `origin/main:v2/app/globals.css` (JH206), values VERBATIM.
+ * This replaces a hand-transcribed provisional file that carried the older canvas values and was
+ * marked "do not build against it". The occurrence counts in the comments below are the canvas
+ * measurements that chose each value; they are kept so the count can be re-run rather than trusted.
  *
- * `@theme static`, not the bare form: Tailwind v4 emits a theme variable only
- * when a generated utility references it, so a token used only as a
- * hand-authored var(--color-*) is silently pruned from the build — identically
- * in dev and prod. `static` forces every token below into the output. The
- * website repo hit this already; keep it.
+ * ── Structure: two layers, and the reason ────────────────────────────────────────────────────
+ * `:root` declares raw values and the shadcn semantic layer as ORDINARY custom properties.
+ * `@theme inline` then maps `--color-*` onto them by reference.
  *
- * Dark mode uses the `.dark` class variant, matching the website's existing
- * `@custom-variant dark (&:is(.dark *))`.
+ * This is not stylistic. Tailwind v4 emits a bare `@theme` variable only when a generated utility
+ * references it, so a token consumed only as hand-authored `var(--x)` is pruned silently —
+ * identically in dev and prod, with no error. Declaring the real values in `:root` sidesteps that
+ * entirely: `:root` is plain CSS and always emits. Verified on v2, where 7 of 49 tokens
+ * (`--jh-green-100`, `--jh-indigo-850`, `--jh-red-300` and the rest of the raw ramp) are never
+ * mapped into the theme block and are consumed by hand — and work.
+ *
+ * That property matters more here than it did in v2, because the design layer adds several roles no
+ * utility will ever reference: `--pending-rule`, the five `--voice-*`, `--ring-on-accent`.
+ *
+ * ── Dark ─────────────────────────────────────────────────────────────────────────────────────
+ * `.dark` class variant, not `prefers-color-scheme` and not `[data-theme]`. Both consuming repos
+ * already bind it this way. The design-system export's `[data-theme="dark"]` form is an alias, not
+ * the source — see JH206's action plan.
+ *
+ * ── What is NOT here yet ─────────────────────────────────────────────────────────────────────
+ * Type, spacing, shape and motion scales. They arrive in commit 3 of JH206 from the design pass
+ * (`jh-design-system-v10`). This commit is deliberately inert: same values, new home.
  */
 
-@theme static {
-  /* ── Colour roles ────────────────────────────────────────────────────────
-   * Names are the canvases' own, kept verbatim. They are terse and
-   * console-derived, and a "better" name here would mean the design and the
-   * code speak different languages — which is the drift this package exists
-   * to prevent. Source: v7 A1–A5, v7 B, v8 C.
+:root {
+  /* ---- Brand ---------------------------------------------------------------------------------
+   * #1c1468 is the brand. 385 occurrences — 312 as `color`, 55 as `background`. It is both the
+   * primary ink and the primary surface, which is why it maps to `foreground` and `primary` alike.
    */
-  --color-bg: #ffffff;      /* page ground */
-  --color-sur: #fbfbfd;     /* raised surface */
-  --color-card: #ffffff;    /* card fill */
-  --color-ink: #1c1468;     /* primary text */
-  --color-ink2: #494383;    /* secondary text */
-  --color-ink3: #9691b8;    /* muted text */
-  --color-mut: #f4f4fb;     /* muted fill */
-  --color-line: #e2e0ef;    /* hairline border */
-  --color-ring: #2f249b;    /* focus ring */
-  --color-dang: #b42318;    /* destructive */
-  --color-accink: #2f249b;  /* accent text/fill */
+  --jh-indigo-900: #1c1468; /* brand. primary ink + primary surface */
+  --jh-indigo-700: #2f249b; /* links (`a{color:#2f249b}`) and accent surfaces. 46 color / 41 bg / 19 border */
+  --jh-indigo-500: #494383; /* secondary ink. 238 of its 239 uses are `color` */
+  --jh-indigo-300: #9691b8; /* tertiary / placeholder ink. 182 color, 18 border */
+  --jh-indigo-100: #e2e0ef; /* the border colour. 196 of 220 uses are a `border-*` property */
+  --jh-indigo-050: #f4f4fb; /* muted surface. all 56 uses are `background` */
+  --jh-indigo-025: #fbfbfd; /* subtlest surface, e.g. side rails. all 24 uses are `background` */
 
-  --font-sans: "Overused Grotesk", ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* ---- Warm accents --------------------------------------------------------------------------
+   * A small warm set that carries the human/editorial side of the brand: avatars, pull quotes.
+   */
+  --jh-sand-200: #ecdfd7; /* warm accent surface, always under #1c1468 text. all 24 uses `background` */
+  --jh-sand-050: #faf7f2; /* warm surface. all 4 uses `background` */
+  --jh-gold-500: #c9a45c; /* highlight rule / ring. 4 uses, all `border-*` */
+
+  /* ---- Status --------------------------------------------------------------------------------- */
+  --jh-red-600: #b42318; /* destructive. 26 color, 11 border, 3 bg */
+  --jh-green-700: #00793e; /* success ink. 5 color, 2 bg */
+  --jh-green-100: #d4f7e7; /* success surface. all 6 uses `background` */
+
+  --jh-white: #ffffff;
+
+  /* ---- Dark surfaces (C-18) ---------------------------------------------------------------
+   * The wireframes are light-only (`jh-wireframes-v6` has no dark canvases), so these three are
+   * new rather than ported — there is nothing to copy. Each is chosen against a measured WCAG
+   * contrast ratio (`docs/... C-18 baseline`), not by eye: `#0d0a26` vs `#1c1468` read as nearly
+   * identical (1.24:1) when tried as the dark card surface, which is why the card gets its own
+   * value instead of reusing the brand navy.
+   */
+  --jh-indigo-950: #0d0a26; /* dark canvas. fg #fbfbfd = 18.67:1 */
+  --jh-indigo-850: #241d68; /* dark card/popover/muted surface. vs canvas 1.33:1; fg 14.01:1 */
+  --jh-red-300: #ff9b8f; /* destructive text/icon on dark surfaces. vs card 7.13:1, vs canvas 9.50:1 */
+
+  /* ---- Semantic layer -------------------------------------------------------------------------
+   * shadcn's token names, so the `C-17` primitives re-skin without edits.
+   */
+  --background: var(--jh-white);
+  --foreground: var(--jh-indigo-900);
+  --card: var(--jh-white);
+  --card-foreground: var(--jh-indigo-900);
+  --popover: var(--jh-white);
+  --popover-foreground: var(--jh-indigo-900);
+  --primary: var(--jh-indigo-900);
+  --primary-foreground: var(--jh-white);
+  --secondary: var(--jh-indigo-100);
+  --secondary-foreground: var(--jh-indigo-900);
+  --muted: var(--jh-indigo-050);
+  --muted-foreground: var(--jh-indigo-500);
+  /* `accent` is shadcn's *hover* surface (`hover:bg-accent` on ghost and outline buttons, select
+   * and accordion rows), not the brand accent the name suggests. The saturated #2f249b belongs to
+   * `ring` and to `brand-700` for links — mapping it here turns every ghost-button hover into a
+   * solid indigo block. Checked against the ported primitives: bg-accent and bg-accent/50 appear
+   * only in hover and selected states. */
+  --accent: var(--jh-indigo-050);
+  --accent-foreground: var(--jh-indigo-900);
+  --destructive: var(--jh-red-600);
+  --destructive-foreground: var(--jh-white);
+  --success: var(--jh-green-700);
+  --success-foreground: var(--jh-white);
+  --success-muted: var(--jh-green-100);
+  --border: var(--jh-indigo-100);
+  --input: var(--jh-indigo-100);
+  --ring: var(--jh-indigo-700);
+  --placeholder: var(--jh-indigo-300);
+
+  /* Sidebars in the wireframes are the brand surface with white text, not a tinted panel. */
+  --sidebar: var(--jh-indigo-900);
+  --sidebar-foreground: var(--jh-white);
+  --sidebar-primary: var(--jh-indigo-700);
+  --sidebar-primary-foreground: var(--jh-white);
+  --sidebar-accent: var(--jh-indigo-700);
+  --sidebar-accent-foreground: var(--jh-white);
+  --sidebar-border: var(--jh-indigo-700);
+  --sidebar-ring: var(--jh-indigo-100);
+
+  /* ---- Radius ---------------------------------------------------------------------------------
+   * The wireframes use 19 distinct radii — they are drawings, not a system, so the scale is chosen
+   * rather than copied. 0.75rem was picked because shadcn's own calc derivations then land on the
+   * four most-used real values almost exactly:
+   *   sm = 12-4 =  8px (15 uses) · md = 12-2 = 10px (41) · lg = 12px (22) · xl = 12+4 = 16px (47)
+   */
+  --radius: 0.75rem;
 }
 
+/*
+ * `dark:` is bound to an explicit `.dark` ancestor, exactly as the legacy app binds it.
+ *
+ * This is load-bearing and not a style preference. Tailwind v4's *default* `dark:` is
+ * `prefers-color-scheme`, and 9 of the 19 `C-17` primitives carry `dark:` utilities (15 in total).
+ * With no dark palette defined yet, the default behaviour would fire those utilities for every
+ * visitor whose OS is set to dark and paint them against light tokens — visibly broken, and broken
+ * only for some people, which is the worst way to find out. Binding to `.dark` makes them inert
+ * until a dark palette actually exists.
+ *
+ * ⚠️ Designing that palette is `C-18`'s job, whose acceptance criterion is that every primitive
+ * renders in both light and dark. The wireframes are light-only, so there is nothing to copy and
+ * inventing one here would be designing, not porting.
+ */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * `C-18` dark theme, 2026-08-26. Every pairing below is measured (relative-luminance WCAG formula),
+ * not eyeballed — ratios are recorded in `phases/phase-C/C-18/NOTES.md` and the baseline doc, and
+ * every one clears AA (4.5:1 text, 3:1 UI/non-text). Two deliberate departures from mirroring the
+ * light-mode ratios, because a straight mirror fails here:
+ *
+ * - `--border`/`--input`/`--ring` use `--jh-indigo-300` (not the near-invisible `--jh-indigo-100`
+ *   light uses): `#2f249b` (light's `--ring`) on the dark canvas is 1.70:1, well under the 3:1 a
+ *   focus ring or an input boundary needs against a dark background.
+ * - `--destructive` becomes `--jh-red-300` rather than staying `#b42318`: the light-mode red is
+ * `2.93:1` on the dark canvas, below AA text — and `text-destructive` is a live use (`Alert`), not a
+ * hypothetical one.
+ *
+ * `--success`/`--success-foreground`/`--success-muted` and `--placeholder` are NOT overridden here.
+ * None of the 19 primitives consume them (checked with `command grep -rn "text-success\|bg-success"
+ * components/ui`, no hits) — designing dark values for a token nothing renders would be guessing.
+ * Verify before the first primitive uses either.
+ *
+ * `--sidebar*` is also not overridden: it is already a dark surface in light mode (indigo-900 with
+ * white text), so the light-mode values serve both themes unchanged.
+ */
 .dark {
-  --color-bg: #0d0a26;
-  --color-sur: #241d68;
-  --color-card: #241d68;
-  --color-ink: #fbfbfd;
-  --color-ink2: #9691b8;
+  --background: var(--jh-indigo-950);
+  --foreground: var(--jh-indigo-025);
+  --card: var(--jh-indigo-850);
+  --card-foreground: var(--jh-indigo-025);
+  --popover: var(--jh-indigo-850);
+  --popover-foreground: var(--jh-indigo-025);
+  --primary: var(--jh-indigo-300);
+  --primary-foreground: var(--jh-indigo-950);
+  --secondary: var(--jh-indigo-700);
+  --secondary-foreground: var(--jh-indigo-025);
+  --muted: var(--jh-indigo-850);
+  --muted-foreground: var(--jh-indigo-300);
+  --accent: var(--jh-indigo-700);
+  --accent-foreground: var(--jh-indigo-025);
+  --destructive: var(--jh-red-300);
+  --destructive-foreground: var(--jh-indigo-950);
+  --border: var(--jh-indigo-300);
+  --input: var(--jh-indigo-300);
+  --ring: var(--jh-indigo-300);
+}
 
-  /* 🔴 UNRESOLVED — JH138 item 1.2. The canvases bind no dark value for ink3.
-   * It is set to ink2's dark value here so nothing renders invisible, which is
-   * a STOPGAP, not a decision: it collapses the muted-text tone into the
-   * secondary-text tone, so the two are indistinguishable in dark.
-   *
-   * Compounding it, #9691b8 is simultaneously --color-line in dark below. A
-   * text tone and a border tone sharing one value is a contrast problem that
-   * needs measuring, not asserting. Do not treat this line as settled. */
-  --color-ink3: #9691b8;
+@theme inline {
+  --font-sans: var(--font-sans-loaded), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-serif-loaded), ui-serif, Georgia, serif;
 
-  --color-mut: #241d68;
-  --color-line: #9691b8;
-  --color-ring: #9691b8;
-  --color-dang: #ff9b8f;
-  --color-accink: #fbfbfd;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted: var(--success-muted);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-placeholder: var(--placeholder);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* The raw ramp stays addressable (`bg-brand-700`) for the cases where a semantic name would be a
+   * lie — a brand mark, a chart series. Screens should reach for the semantic tokens first. */
+  --color-brand-900: var(--jh-indigo-900);
+  --color-brand-700: var(--jh-indigo-700);
+  --color-brand-500: var(--jh-indigo-500);
+  --color-brand-300: var(--jh-indigo-300);
+  --color-brand-100: var(--jh-indigo-100);
+  --color-brand-050: var(--jh-indigo-050);
+  --color-brand-025: var(--jh-indigo-025);
+  --color-sand-200: var(--jh-sand-200);
+  --color-sand-050: var(--jh-sand-050);
+  --color-gold-500: var(--jh-gold-500);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
