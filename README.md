@@ -70,7 +70,7 @@ colour values.
 | | State |
 |---|---|
 | Colour | 25 roles, both themes. **152 contrast pairs**, recomputed from the values in this file by `scripts/verify-contrast.py`: **0 failures**, 10 within 0.15 of their floor and marked `tight` at the declaration ([how](#contrast-is-computed-not-remembered)) |
-| Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590, 11-step size ramp **under `--text-console-*`** (see [Type: sizes are prefixed](#type-sizes-are-prefixed-and-that-is-the-point)), negative tracking scaled to size |
+| Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590 bound to `font-light`/`font-normal`/`font-medium`/`font-semibold` (see [Weights are bound](#weights-are-bound-and-510590-are-the-point)), 11-step size ramp **under `--text-console-*`** (see [Type: sizes are prefixed](#type-sizes-are-prefixed-and-that-is-the-point)), negative tracking scaled to size |
 | Spacing | 8px base, 9 steps plus named surface paddings and a 44px member touch floor |
 | Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px ceiling — plus one floating-layer shadow |
 | Motion | 100/120/200ms, one easing curve, focus-ring geometry |
@@ -267,6 +267,52 @@ bare number instead of a named `--leading-*` token — a number with no name att
 nobody can find the reasoning for later.
 
 Decided 2026-09-01, [JH215](https://trello.com/c/tZxTAeXf).
+
+### Weights are bound, and 510/590 are the point
+
+The scale is `300 / 400 / 510 / 590`, and **510 and 590 are not standard weights** — they exist only
+on Inter's variable axis. That is the whole reason JH211 subset the
+faces *without* `--instancer`: an instanced subset collapses the axis to fixed instances, a static
+face rounds 510 to 500 and 590 to 600, and the result passes review while being wrong.
+
+Until [JH225](https://trello.com/c/BQMHdxhZ) the axis was intact and **nothing could ask for it.**
+`@theme inline` bound none of the four weights, so Tailwind emitted its own scale and the rounding
+happened one layer above the font instead. Measured on `origin/main` (`7178b67`, 2026-09-02) by
+compiling `tokens.css` with the real Tailwind 4.1.18 and reading `getComputedStyle` in Chromium:
+
+| utility | before | after |
+|---|---|---|
+| `font-light` | 300 | 300 (unchanged — the token equals Tailwind's stock value) |
+| `font-normal` | 400 | 400 (unchanged — same reason) |
+| `font-medium` | **500** | **510** |
+| `font-semibold` | **600** | **590** |
+
+The axis does respond at those stops rather than snapping to the nearest hundred: rendered advance
+width of "Refill queue" at 64px goes 330.875px → 331.609px from 500 to 510, and 338.234px →
+337.500px from 600 to 590. Both deltas are 0.734px, exactly **a tenth of the 500 → 600 step**
+(7.359px), so the change is real but small — roughly 0.2% of advance width on the fourteen
+`font-medium` sites in this package.
+
+**Why weight broke here when tracking did not**, since both are declared the same way: Tailwind's
+own theme variables are named `--tracking-tight` and `--tracking-normal`, which is exactly what
+`tokens.css` calls them, so a plain `:root` declaration overrides Tailwind's by cascade and the
+`tracking-*` utilities already carry our values. Its weight variables are `--font-weight-*` while
+ours are `--weight-*` — different names, no collision, no override, nothing reachable. The names
+are the whole difference, and neither case is visible in a diff.
+
+`scripts/verify-weight-scale.py` fails the build if a declared weight is not bound, if a binding
+points at a literal or the wrong token, or if a `--font-weight-*` is declared outside `@theme
+inline` where it would clobber the theme layer by cascade. It takes its notion of the truth from
+the `:root` declarations, never from the `@theme inline` block it is checking — the mistake
+`verify-class-merge.mjs` shipped and had to fix.
+
+**`font-bold` is deliberately not bound** and keeps Tailwind's stock 700. Aliasing it onto
+`--weight-semibold` would silently retype every `font-bold` already written in a consuming app with
+nothing to review against, which is the failure the [prefixed sizes](#type-sizes-are-prefixed-and-that-is-the-point)
+section exists for; adding a `--weight-bold: 700` would contradict the ceiling this system declares.
+The four `font-bold` sites in `web-app/v2` are a consumer retype, tracked on JH225.
+
+Decided 2026-09-02, [JH225](https://trello.com/c/BQMHdxhZ).
 
 **Two ways to load the fonts — pick by whether you can express `unicode-range`.**
 

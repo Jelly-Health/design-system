@@ -420,6 +420,32 @@
    * migrated off it; this token should be deleted once none remain. */
   --font-serif: var(--font-text);
 
+  /* The weight scale, bound so a utility can actually reach it. Declared since JH206 and bound by
+   * nothing until now: Tailwind emitted its own scale, so `font-medium` resolved to stock 500 and
+   * `font-semibold` to 600, and the 510/590 stops were unreachable by any utility. Measured in a
+   * real browser, not read from source — `getComputedStyle` on a compiled stylesheet.
+   *
+   * This is the whole reason JH211 subset the faces WITHOUT `--instancer`: the variable weight axis
+   * is kept alive precisely so these two off-scale stops can render, and `scripts/verify-fonts.py`
+   * mutation-tests that the axis survives. The axis was intact and nothing could ask for it. The
+   * static-face rounding tokens.css warns about above was happening anyway, one layer up.
+   *
+   * ⚠️ `font-bold` is deliberately NOT bound, and this is not the `--font-serif` case above.
+   * `--font-serif` is aliased because without it a call site renders Georgia — a family that is not
+   * in this system at all, a visible defect. `font-bold` renders Inter 700: heavier than the
+   * ceiling this file declares, but not a foreign typeface. Binding it would mean either inventing
+   * `--weight-bold: 700` (which contradicts "there is no 700 in this system" three lines up) or
+   * aliasing it onto `--weight-semibold`, which would silently retype every `font-bold` in a
+   * consuming app with nothing to review against — the exact failure the `--text-sm` note above
+   * documents. So it stays stock, and the four `font-bold` sites in `web-app/v2` are a consumer
+   * retype, tracked on JH225 rather than absorbed here. Decided 2026-09-02, JH225.
+   *
+   * scripts/verify-weight-scale.mjs fails if any of these four bindings goes missing. */
+  --font-weight-light: var(--weight-light);
+  --font-weight-normal: var(--weight-regular);
+  --font-weight-medium: var(--weight-medium);
+  --font-weight-semibold: var(--weight-semibold);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
