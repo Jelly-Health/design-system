@@ -136,6 +136,14 @@ their design", and connecting them to the designed vocabulary is a real design d
   thing* and `checkbox.tsx`'s docstring for the full argument, including why the member plane also
   has to reserve its own footprint (without it, two radios in `RadioGroup`'s own `grid gap-3` have
   overlapping hit areas and the lower one silently wins taps meant for the upper).
+- 🔴 **Six primitives inherit their text colour and render black in dark.** `Button`
+  `outline`/`ghost`, `Label`, `Input`, `Textarea`, `PortalConversationHeader` and
+  `PortalConversationFooter` declare no resting `text-*`, and the package declares no base
+  `body { color }`, so they resolve to the browser default. **20.12:1 in light, 1.05:1 in dark.**
+  Found 2026-09-02 by JH221's sign-off, owned by [JH230](https://trello.com/c/QCQBL2Nj), guarded by
+  `scripts/verify-member-legibility.mjs` — which is **red on `main` on purpose** and goes green as
+  each fix lands. The fix is a real choice (a base layer, or six explicit classes) and JH230 makes
+  it. See § *The dark-mode sign-off*.
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
 - ~~**No wordmark.**~~ **Fixed 2026-09-01 (JH200).** `<Wordmark />` ships from the package root —
@@ -950,6 +958,101 @@ never generated.
 ⚠️ **None of this is reachable from a consumer yet.** `web-app/v2` is pinned to `b49123c`, which
 predates JH218, so neither the state patterns nor these shells can be imported there until someone
 re-pins — a JH217-shaped follow-up, not this card.
+
+---
+
+### The dark-mode sign-off
+
+**Signed off 2026-09-02 by Gian Riyanto (JH221), against `b264d78`.** Every member surface was
+rendered in both themes at 360px and 900px and looked at. The verdict is **pass with three
+findings**, one of them blocking a claim this README would otherwise make.
+
+The arithmetic was never what was missing. `verify-contrast.py` computes 152 pairs, and
+`verify-member-states.mjs` and `verify-member-chrome.mjs` assert 122 more cases between them — and
+**not one of the three took a picture.** So:
+
+```
+node scripts/contact-sheet-member.mjs
+→ coverage: 31/31 renderable member exports appear on the sheet
+→ .design-sync/.cache/contact-sheet/{sheet-360,sheet-900}.png + surfaces/*.png
+```
+
+It renders every member surface light **beside** dark, in one image, at both widths. Side by side
+rather than two files, because dark is not judged in isolation — it is judged against what the
+surface is supposed to communicate, which light establishes. The images are a build artefact under
+`.cache/` and are not committed; **the script is the deliverable**, because a sign-off has to be
+repeatable or it decays into a date. Its coverage check refuses to run if a renderable export from
+`src/components/member/` is missing from the sheet, so the next card that adds a surface cannot
+quietly leave it uninspected.
+
+#### What passed
+
+- **The four voices.** Provider, coordinator and system stay delimited against `--sur` in dark and
+  the member bubble is unmistakably the member's. Provider and coordinator sit close in both themes
+  by design; the sender name is what separates them, and it does.
+- **The `TaskDone` tick.** `verify-member-chrome.mjs` asserts it clears 3:1 as a graphical object,
+  which is the WCAG 1.4.11 floor — but a floor is not a judgement about whether a green tick on a
+  near-black disc reads as *completed* rather than as decoration. Looked at: it reads as completed.
+- **Error vs empty.** The structural separation holds in dark. `--card` sits **6.99 ΔL\*** from
+  `--line` there against **12.91** in light, so the box is quieter — and still a box. A bordered
+  card with a control still cannot be mistaken for a sentence on the page ground.
+- **The standing instruction in `message-bubble.tsx`** — *"do not put anything below the member body
+  size on the member bubble in dark; there is no headroom for it."* Audited across all five
+  `--text-member-*` steps: nothing sub-body-size lands on `--voice-member`. The bubble base is
+  `text-member-body`, the ramp's 16px floor, and JH219's new `--text-member-caption` uses land on
+  `--sur`, `--mut-soft` and the onboarding card — never on the member fill.
+- **The portal container query** at both widths, in both themes.
+
+#### 🔴 What failed — [JH230](https://trello.com/c/QCQBL2Nj)
+
+**Six components declare no resting text colour**, and the package declares no base
+`body { color }` either, so their text resolves to the browser default: **black**. In light that is
+invisible — black on `--bg` measures **20.12:1** and looks deliberate. In dark it is **1.05:1**.
+`Button` `outline`/`ghost`, `Label`, `Input`, `Textarea`, `PortalConversationHeader` and
+`PortalConversationFooter`; and the worst instance is `MemberError`'s retry control, which that
+component's own docstring calls *"the one difference a member reads without reading"*.
+
+**Why 152 passing pairs did not catch it, and this is the part worth keeping:** `verify-contrast.py`
+checks pairs of *tokens*, and these components name no token. A component with no `text-*` class
+has no pair to check, so it is invisible to a pair checker however thorough the pair checker is.
+
+Guarded now by `scripts/verify-member-legibility.mjs`, which finds it by rendering with a **sentinel
+colour on `<body>`** and reporting every element that comes back as the sentinel — exact rather than
+heuristic, because testing for `rgb(0,0,0)` would confuse *undeclared* with *deliberately black*.
+
+```
+node scripts/verify-member-legibility.mjs
+→ 1 passed, 7 failed   ← red on purpose; see JH230
+```
+
+**That red is the finding's record, not a broken check.** It carries the six in a `KNOWN` register
+so a *seventh* is reported as new and unfiled rather than lost in the noise, and it goes green on
+its own — with no edit to the check — as each fix lands. It is not in CI, along with every other
+browser-driven script here (no lockfile), so it blocks nobody.
+
+#### Two findings recorded, not fixed
+
+- **`Button variant="link"` uses `--accent-fill` as text** — **4.02:1** in dark against the 4.5 text
+  floor. The 152 pairs miss it for a second, different reason worth naming separately: the script
+  scores `--accent-fill` at its **3.0 graphical** floor, correctly, because that is what the role is
+  for. This variant uses it as text. `--accent-ink` (*"the accent AS TEXT on a page surface"*,
+  **10.00:1** in dark) is the role that exists for this, and every member component already reaches
+  for it — `PortalBack`, `PortalMessageBar` and `TaskDone`'s back link. It is a stock-shadcn
+  leftover on the console plane, and no member surface renders it today, which is why it is recorded
+  here rather than fixed under a member card. Part B of the legibility guard catches it the moment
+  one does: mutation-tested by moving that exact shape onto `PortalBack`, where it fails at 4.02 in
+  dark, passes in light, and `verify-contrast.py` stays at 152 / 10 tight / **0 failures** throughout.
+- **`PendingValue` sets `bg-card`, which is theme-asymmetric.** `--card` sits **1.09 ΔL\*** from
+  `--bg` in light and **5.24** in dark — above the 3 ΔL\* threshold `tokens.css` sets for *"a fill
+  difference can delimit this"*. So the same component is a flat underlined blank in light and a
+  **filled chip** in dark, which is nearer a redaction or an input than the boundary it means. Left
+  alone deliberately: the fill also pins the component's contrast pair to a known surface instead of
+  whatever it happens to land on, and trading that away is a design decision rather than a
+  correction. On a card — its most common context — it is flush in both themes and the question does
+  not arise.
+
+⚠️ **`tokens.css` was not touched and did not need to be.** All 152 pairs pass; the roles are right.
+Every finding above is a component that failed to reach for one.
 
 ---
 
