@@ -19,6 +19,13 @@ four rules that are easy to break unmissable.
    member body floor at narrow viewports, silently, and axe cannot see it because a small font is
    not a WCAG failure. `scripts/verify-type-ramp.py` enforces all of this; run it before you commit
    a token change.
+
+   **A new `--text-*` step also has to be named in `FONT_SIZE_STEPS` in `src/lib/utils.ts`.**
+   tailwind-merge files any `text-*` value it does not recognise as a COLOUR, so an unregistered
+   size class deletes the colour class beside it — or is deleted by it — with no error and nothing
+   in the diff to review. It had already happened in 18 places across 9 components before anyone
+   looked. `scripts/verify-class-merge.mjs` fails when that list and `tokens.css` disagree, in
+   either direction; run it alongside the ramp check.
 4. **`/design-sync` is typed by a human**, in this directory, at the Claude Code prompt. You cannot run
    it and should not try.
 

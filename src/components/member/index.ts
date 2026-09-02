@@ -10,9 +10,10 @@
  * rest out of the module graph, exactly as the `ui` subpath is exported for.
  *
  * ⚠️ Same precondition as `./ui/index.ts`: a star export is only safe while no two modules export
- * the same name. An ambiguous one is dropped with no error. Measured 2026-09-02 across every
- * component file in this package: **78 exported names, 0 collisions** — 70 of them pre-existing,
- * 8 added here. Re-run it if a component gains an export.
+ * the same name. An ambiguous one is dropped with no error. Re-measured 2026-09-02 across every
+ * component file in this package after JH212's second slice: **82 exported names, 0 collisions**
+ * — 78 pre-existing, 4 added (`MemberField`, `MemberFieldControlProps`, `inputVariants`,
+ * `textareaVariants`). Re-run it if a component gains an export.
  *
  * (No glob written literally in this comment: a `tsx` glob contains the two characters that close
  * a block comment, which is how the first cut of this file failed to compile.)
@@ -20,3 +21,4 @@
 export * from './message-bubble'
 export * from './thread'
 export * from './pending-value'
+export * from './field'
