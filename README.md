@@ -536,6 +536,49 @@ every number in this README, are outside the repo (they are not ours to commit).
 
 ---
 
+## Reaching for the right thing
+
+Every answer below is decided somewhere else in this file. This is the one place that gives them in
+the order you hit them, because they all resolve to the same first question: **which product is this
+surface in?** Not "which size looks right" — the two ramps overlap in pixels (`--text-console-lg` and
+`--text-member-body` are both 16px) and disagree about everything else.
+
+| Deciding | Console — desktop, dense, keyboard | Member and marketing — mobile-first, sparse |
+|---|---|---|
+| Body copy | `text-console-base` · 13px, *console primary* in `tokens.css` | `text-member-body` · 16px, a **floor** rather than a default |
+| Smallest allowed | `text-console-2xs` · 10px | `text-member-caption` · 14px, the ramp's floor |
+| Headings | `text-console-xl` and up — size-named steps, no per-role assignment | `text-member-lede` (intro) · `text-member-title` (screen or card) · `text-member-section` (marketing `<h2>`, fluid) — role-named, JH214 |
+| Surface padding | `--pad-console-row` 8/14 · `--pad-console-panel` 16/18 | `--pad-member-screen` 24/22 |
+| Stacking gap | `--gap-console-thread` 11px | `--gap-member-thread` 18px |
+| Numerals | `--numeric-console`, tabular — columns have to align | `--numeric-member`, proportional — it reads as prose |
+| Control height | `size` alone: 32 / 36 / 40px | `plane="member"` — raises to `--touch-min`, 44px |
+
+**The headings row is asymmetric on purpose**, and it is worth knowing before you go hunting for a
+token that is not missing: the console ramp is named by **size**, the member ramp by **role**. The
+console is one dense surface where a step is chosen against its neighbours; the member side is many
+single-purpose screens where the same role recurs. Neither ramp is the other's fallback, and a step
+borrowed across the line will be the wrong leading even when the pixel size matches — see
+§ *Line-height is mapped, not derived*.
+
+Then, in order:
+
+1. **Is there a token?** Read `src/styles/tokens.css` before concluding there is not — it carries
+   colour, type, spacing, shape and motion, and a value that looks absent is usually named something
+   you did not guess. If nothing covers it, say so and stop rather than filling it in: `AGENTS.md`
+   rule 1 exists because an invented value becomes the system the moment it ships.
+2. **Is there already a composition?** `member/` holds the pieces that carry a product decision
+   (thread, message bubble, field, pending value); `ui/` holds the shadcn primitives, which are atoms
+   with no opinion about the product; `brand/` is the wordmark. A member screen assembled only from
+   `ui/` comes out console-typed — the warning in § *The member compositions* has the measurement.
+3. **Does the primitive know which plane it is on?** If it takes `plane`, pass it. If it does not and
+   the surface is member-facing, that is a gap in the primitive, not something a wrapper can fix — a
+   wrapper only sets a minimum on the box it owns, which clears the floor for the row and not for the
+   tap target inside it.
+4. **Did the consumer's `@source` glob move?** A utility used only inside a package component is
+   dropped silently, dev and prod, unless the consumer scans `src/components/**/*.tsx`.
+
+---
+
 ## House rules
 
 - **No hardcoded colour.** If a component needs a colour with no role, that is a missing role — name it
@@ -547,3 +590,9 @@ every number in this README, are outside the repo (they are not ours to commit).
   decision; a three-tier ramp would only get used.
 - **An error state must never be mistakable for an empty one.** In this product a failed load that
   reads as "nothing to do" is the worst thing we can ship.
+- **One system at two densities — never two systems.** Console and member differ by token
+  *family* (`--text-console-*` vs `--text-member-*`, `--pad-console-*` vs `--pad-member-*`) and by
+  the `plane` axis on a primitive — never by a second copy of a component, a forked scale, or a
+  value picked because the shared one "looked wrong here". v1's admin screens read as a different
+  product because that split was allowed to become structural. § *Reaching for the right thing* is
+  the map.
