@@ -1,8 +1,8 @@
 # The package has no build and no lockfile, so there is nothing to compile and
 # no install to cache. What it does have is invariants that fail silently in a
 # browser -- a font subset that renders slightly wrong, a type ramp that resizes
-# a consumer's existing text without an error, and a colour role edited past a
-# contrast floor. All are checked here because none is visible in a diff, and a
+# a consumer's existing text without an error, a weight token that no utility
+# can reach, and a colour role edited past a contrast floor. All are checked here because none is visible in a diff, and a
 # green axe run does not see the last one either: axe reads a rendered page, and
 # a pair can be broken in this file long before any page puts it on screen.
 name: verify
@@ -23,6 +23,18 @@ jobs:
       # No dependencies: the ramp check reads CSS and TSX as text on purpose,
       # so it cannot be broken by an install failing.
       - run: python3 scripts/verify-type-ramp.py
+
+  weight-scale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Stdlib only, and text-based for the same reason as the ramp check: this
+      # package has no lockfile, so a check that needed an install would be a
+      # check that does not run.
+      - run: python3 scripts/verify-weight-scale.py
 
   fonts:
     runs-on: ubuntu-latest
