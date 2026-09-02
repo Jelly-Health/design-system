@@ -77,11 +77,42 @@ None outstanding — `package-validate.mjs`'s final run reports `render check: 2
 cleanly`, zero warns.
 
 
-## Coverage gap, as of this commit
+## Coverage gap — updated 2026-09-02 (JH225)
 
 This run synced the 19 shadcn primitives + `Wordmark` — 20 components, everything that existed in
-`src/components/ui/` and `src/components/brand/` when it started. **JH212** (merged `4b56f19`,
-concurrently with this run) added three more under `src/components/member/`: `MessageBubble`,
-`PendingClinicalValue`, `Thread`. Not covered here — a future re-sync picks them up; `cfg.pkg`
-already scopes discovery to the whole package root (`src/index.ts`), so no config change is needed,
-just running the driver again.
+`src/components/ui/` and `src/components/brand/` when it started. The member plane is **entirely
+uncovered**, and there are now **four** components in it, not the three this note first recorded:
+
+| Component | Landed |
+|---|---|
+| `MessageBubble` | `8e9f33e` (PR #13, JH212) |
+| `PendingValue` | `8e9f33e` (PR #13, JH212) |
+| `Thread` | `8e9f33e` (PR #13, JH212) |
+| `MemberField` | `03f0847` (PR #16, JH212) — **after this note was written** |
+
+⚠️ Two corrections to the original wording: it said *three* components, and it named
+`PendingClinicalValue`. **The actual export is `PendingValue`** (`src/components/member/index.ts`) —
+the longer name is the concept, not the symbol, and a re-sync looking for it finds nothing.
+
+`cfg.pkg` already scopes discovery to the whole package root (`src/index.ts`), so no config change
+is needed to FIND them. But `componentSrcMap` will need new prune entries: these four bring
+sub-parts that the synth-content-scan surfaces as top-level components the same way the `ui/` ones
+did — `MessageSender`, `MessageGroup` (from `message-bubble.tsx`) and `ThreadDay`, `ThreadEvent`
+(from `thread.tsx`). Re-check the discovered list before building, as the note above already warns.
+
+## Deployed state, read back from the live project 2026-09-02
+
+Measured with `DesignSync.get_file` against project `8e452273-ae49-4146-93c6-db96213c5fdc`, so this
+is what the Claude Design project actually renders today, not what a local build produces:
+
+- **`_ds_bundle.css` is stale by three cards.** Its theme layer still declares
+  `--font-weight-medium: 500` and `--font-weight-semibold: 600`, and `.font-medium` resolves to
+  `var(--font-weight-medium)`. JH225 (`ef6dea7`) bound the scale, so a current compile resolves it
+  to `var(--weight-medium)` — **510**, and **590** for semibold. The previews render the old weights
+  until a re-sync pushes a new bundle.
+- **The member type ramp is missing four of its five steps** — only `--text-member-body` is present,
+  so the bundle also predates JH214's `caption`/`lede`/`title`/`section`.
+- 20 components, 0 of them member-plane, per the gap above.
+- Bundle compiled with Tailwind **4.3.3** — match that when regenerating (see `build-css.mjs`).
+- `_ds_needs_recompile` is already set (`{"by":"design-sync-cli"}`), so the app recompiles on next
+  open regardless.
