@@ -26,11 +26,28 @@
  * `member-portal.css`, which is a statement about how a member arrived, not about layout.
  *
  * ⚠️ Same precondition as `./ui/index.ts`: a star export is only safe while no two modules export
- * the same name. An ambiguous one is dropped with no error. Re-measured 2026-09-02 (JH219) across
- * every component file in this package: **126 exported names, 0 collisions** — 109 pre-existing,
- * 17 added (`TaskScreen`, `TaskDone`, `OnboardingScreen`, `OnboardingStep`, and the thirteen
- * `Portal*` parts). Re-run it if a component gains an export; `scripts/verify-member-states.mjs`
- * does the count, so it is checked rather than remembered.
+ * the same name. An ambiguous one is dropped with no error. Measured across every component file
+ * in this package:
+ *
+ *   2026-09-02 (JH218)   109 names, 0 collisions   101 pre-existing + 8 (`MemberEmpty`,
+ *                                                  `MemberError`, `MemberStateView`,
+ *                                                  `memberStateFrom`, `MemberState`, `NonEmpty`,
+ *                                                  `ThreadSkeleton`, `ScreenSkeleton`)
+ *   2026-09-02 (JH222)   115 names, 0 collisions   + 6 cva functions, as the last five primitives
+ *                                                  took the `plane` axis (`labelVariants`,
+ *                                                  `selectTriggerVariants`, `selectItemVariants`,
+ *                                                  `checkboxVariants`, `switchVariants`,
+ *                                                  `radioGroupItemVariants`)
+ *
+ *   2026-09-02 (JH219)   132 names, 0 collisions   + 17, the three screen shells (`TaskScreen`,
+ *                                                  `TaskDone`, `OnboardingScreen`,
+ *                                                  `OnboardingStep`, and the thirteen `Portal*`
+ *                                                  parts)
+ *
+ * Re-run it if a component gains an export; `scripts/verify-member-states.mjs` does the count, so
+ * it is checked rather than remembered — which is how JH222 found out it had moved this number,
+ * and how JH219 found out JH222 had, two hours later. Three cards moved it in one day; the table
+ * is the argument for a check rather than a sentence.
  *
  * ⚠️ The 82 this comment used to quote was correct on the day and was a card stale by the time it
  * was read: JH224's toast landed the same afternoon and took the real figure to 101, with nothing

@@ -36,3 +36,15 @@ export function Disabled() {
     </div>
   );
 }
+/** The member plane (JH222). The track is the same 32×18px it is above; the hit area around it is
+ *  44×44, and the control reserves that much space. */
+export function Member() {
+  return (
+    <div className="flex items-center gap-2">
+      <Switch id="ds-switch-member" plane="member" defaultChecked />
+      <Label htmlFor="ds-switch-member" plane="member">
+        Share progress with my provider
+      </Label>
+    </div>
+  );
+}

@@ -316,7 +316,13 @@ if (ts === null) {
   }
   const collisions = [...owners].filter(([, fs]) => fs.length > 1)
   check(`star exports stay unambiguous (${owners.size} names across ${files.length} files)`, collisions.length === 0, collisions.map(([n, f]) => `${n}: ${f.join(', ')}`).join('; '))
-  check('the count in member/index.ts is still the measured one', owners.size === 126, `measured ${owners.size}, comment says 126 — update both, or find what was added`)
+  /* 109 at JH218; 115 at JH222, which gave the last five primitives a `plane` axis and so added
+   * six cva functions to the star-exported surface; 132 at JH219, which added the three member
+   * screen shells. Bumping this is the intended workflow, not a nuisance: the number exists so
+   * that gaining an export is a decision someone signs, and this check is what turns "re-measure
+   * it" from a thing to remember into a thing that fails. It has now caught three cards in one
+   * day, twice across a merge neither session was watching for. */
+  check('the count in member/index.ts is still the measured one', owners.size === 132, `measured ${owners.size}, comment says 132 — update both, or find what was added`)
 }
 
 /* ═══ C. Layout, in a real browser, in both themes ═════════════════════════════════════════════ */

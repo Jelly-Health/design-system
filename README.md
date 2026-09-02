@@ -108,19 +108,34 @@ their design", and connecting them to the designed vocabulary is a real design d
   on-palette; it should shrink to nothing as they are touched.
 - ~~**There is no member/marketing type ramp.**~~ **Fixed 2026-09-01 (JH214).** Five role-named
   steps, `--text-member-caption` through `--text-member-section` — see § *Type*.
-- **The primitives are typed and sized at console density, and only three of them can opt out yet.**
+- ~~**The primitives are typed and sized at console density, and only three of them can opt out yet.**~~
+  **Closed 2026-09-02 (JH222).**
   Re-measured on `main` 2026-09-02: all **21** size utilities in `src/components/` are
   `text-console-*`, **18** of them `text-console-sm` (12px), and none is a member token. `--touch-min`
   is worse than the earlier note here claimed — it said Button's tallest size was 40px against the
   44px floor, but the relevant number is the DEFAULT, `h-9` = **36px**, and **all six** sizes are
   under the floor. This is why `Jelly-Health/website` overrides both by hand.
 
-  **Partly closed 2026-09-02 (JH212).** `Button`, `Input` and `Textarea` now take `plane="member"` —
-  see § *The button matrix*. The remaining gap is the rest of the set: `Label`, `Checkbox`,
-  `RadioGroup`, `Select` and `Switch` have no member plane, so a member form built from those still
-  starts below the floor. Take them as their first real consumer needs them rather than in one sweep,
-  and note that `Checkbox`, `RadioGroup` and `Switch` are hit-target problems as much as type ones —
-  `Checkbox` is `size-4` (16px), which no font size can fix.
+  **Partly closed 2026-09-02 (JH212)** — `Button`, `Input` and `Textarea` — **and closed
+  2026-09-02 (JH222)** with the remaining five: `Label`, `Select`, `Checkbox`, `RadioGroup` and
+  `Switch`. A member form can now be built entirely from primitives that know the floor.
+
+  The note that used to sit here said to take them as their first real consumer needs them rather
+  than in one sweep. JH222 did the sweep instead, and the reason is worth recording rather than
+  quietly reversing: the pacing rule exists to stop speculative work outrunning a consumer, and
+  there is no consumer coming — `v2` has no member routes, and [JH219](https://trello.com/c/HRq6Uz7B),
+  which would create them, is Blocked on a scheduling question. Waiting for a consumer meant waiting
+  indefinitely, and five separate PRs would each have been too small to review meaningfully. The two
+  halves went in as separate commits, because they are not the same work.
+
+  `Label` and `Select` were type and height, a direct application of `Input`'s axis. The other three
+  are **hit-target problems, not type problems** — `Checkbox` is `size-4` (16px) against a 44px
+  floor, which no font size fixes — and they resolve it by expanding the **hit area** to
+  `--touch-min` while leaving the **painted box** exactly as drawn. Growing the box would be the
+  wrong fix: a 44px square checkbox is not what any canvas draws. See § *Reaching for the right
+  thing* and `checkbox.tsx`'s docstring for the full argument, including why the member plane also
+  has to reserve its own footprint (without it, two radios in `RadioGroup`'s own `grid gap-3` have
+  overlapping hit areas and the lower one silently wins taps meant for the upper).
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
 - ~~**No wordmark.**~~ **Fixed 2026-09-01 (JH200).** `<Wordmark />` ships from the package root —
@@ -452,6 +467,19 @@ for another specimen page to keep in sync with the code.
 | `variant` | `default` · `destructive` · `outline` · `secondary` · `ghost` · `link` | `default` is the accent fill. |
 | `size` | `default` 36px · `sm` 32px · `lg` 40px · `icon` 36px · `icon-sm` 32px · `icon-lg` 40px | Console heights. All six sit under the 44px member floor. |
 | `plane` | `console` (default) · `member` | Raises the control to `--touch-min` and `--text-member-body`. |
+
+Since JH222 the `plane` axis spans **all eight** primitives a member form is built from — `Button`,
+`Input`, `Textarea`, `Label`, `Select`, `Checkbox`, `RadioGroup`, `Switch` — and it means one of two
+things depending on what was actually below the floor:
+
+| | Primitives | What `plane="member"` does |
+|---|---|---|
+| **Type and height** | `Button` `Input` `Textarea` `Label` `Select` | Raises the box to `--touch-min` with `min-h` and the type to the member ramp. |
+| **Hit area only** | `Checkbox` `RadioGroup` `Switch` | Expands a centred pseudo-element to `--touch-min` and **leaves the painted box alone**, since these are 16–18px marks that no font size fixes and that must not grow. Also reserves the 44px footprint, or stacked controls overlap. |
+
+Both are the control's own job for the same reason the fourth rule below gives. `scripts/verify-touch-target.mjs`
+measures the second row in a real browser — hit area, painted box, footprint and a stacked group —
+because every claim in it is geometric and nothing that reads the source can check one.
 
 Four rules the type system cannot enforce and a reviewer has to:
 
