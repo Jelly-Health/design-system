@@ -13,7 +13,11 @@
 | `text-console-lg` | 16 | `text-console-5xl` | 64 |
 | | | `text-console-6xl` | 72 |
 
-Two more, for surfaces that opt OUT of console density: `text-member-body` (16px, airy reading copy) and `text-h1` (one fluid `clamp()` step, for a marketing hero — the only size in the system that scales with viewport).
+**Member surfaces opt OUT of console density and have their own ramp** — use it whenever you are building the patient-facing product, never the console steps: `text-member-caption` (14px, meta/timestamps — the ramp's floor), `text-member-body` (16px, the member body floor: copy, nav, CTA labels), `text-member-lede` (20px, hero paragraph/section intro), `text-member-title` (24px, screen or card title), `text-member-section` (fluid 28→36px, marketing `<h2>`). Plus `text-h1` (fluid 32→56px, one per page) — the two `clamp()` steps are the only sizes that scale with viewport.
+
+**On a member surface, pass `plane="member"`** to `Button`, `Input` and `Textarea`. Every primitive here defaults to console sizing, which is below the 44px `--touch-min` touch floor; `plane` is a separate axis from `size`, and a wrapper cannot resize a control it does not own, so the prop has to go on the control itself.
+
+**The member compositions are `Thread` / `ThreadDay` / `ThreadEvent`, `MessageBubble` / `MessageSender` / `MessageGroup`, `PendingValue`, and `MemberField`** — read their `.prompt.md` before composing a member screen. Two rules bind: a human message is a `MessageBubble` (four voices: `provider`, `coordinator`, `system`, `member`) while a state change is a `ThreadEvent` (a centred hairline row, past tense, never a bubble); and any clinical value not yet signed off is `<PendingValue />`, never a literal number and never a price.
 
 **Color is semantic roles, never raw hex.** `bg-primary`/`text-primary-foreground` for the primary action, `bg-secondary`, `bg-destructive` for danger, `text-muted-foreground` for de-emphasized text, `border-input` for form-field borders. For brand accent specifically, use `text-accent-ink` (accent as text on a page surface) and the `bg-accent-fill`/`text-accent-on-accent` pair (accent as a filled surface, reversed) — NOT the generic `text-accent`/`bg-accent`/`text-accent-foreground`, which are shadcn's own hover/selected-state aliases and resolve to a near-white token, not a brand color.
 
@@ -25,7 +29,7 @@ Two more, for surfaces that opt OUT of console density: `text-member-body` (16px
 
 - `styles.css` (imports the compiled component styles + tokens + fonts) — the only stylesheet a design needs.
 - `README.md`, generated per component from its `.d.ts` — the prop contract.
-- Each component's own `.prompt.md` — real composition examples, not invented ones; ported from this repo's own `v2/app/design-system/page.tsx` showcase page.
+- Each component's own `.prompt.md` — real composition examples, not invented ones; ported from this repo's own `v2/app/design-system/page.tsx` showcase page (primitives) and the package README's member-composition section (`Thread`, `MessageBubble`, `PendingValue`, `MemberField`).
 
 ## One real composition
 

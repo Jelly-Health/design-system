@@ -28,6 +28,12 @@
  * stands; only the number was wrong. A wrong reference point is worse than none, because it makes a
  * correct compile look broken.
  *
+ * And that is why no number here is a target: the member re-sync on the SAME day moved it twice for
+ * entirely legitimate reasons -- **58,637** once four authored previews entered the `@source` scan,
+ * then **59,017** once vocabulary-probe.tsx was widened to the member type ramp. The output tracks
+ * the vocabulary in scope, so it MUST move whenever previews or the probe change. Compare against
+ * the previous run on this tree, never against a number in a comment.
+ *
  * Requires @tailwindcss/postcss + tw-animate-css resolvable from <repo-root>/node_modules -- see
  * NOTES.md for how this run sourced them (symlinked from Jelly-Health/website's install; this
  * package itself has no lockfile yet).
