@@ -44,6 +44,17 @@
  *                                                  `OnboardingStep`, and the thirteen `Portal*`
  *                                                  parts)
  *
+ *   2026-09-02 (JH227)   135 names, 0 collisions   + 3, the dialog close guard
+ *                                                  (`dialogCloseGuard`, `DialogCloseGuard`,
+ *                                                  `DialogContentProps`). A fourth card in one
+ *                                                  day, and the check caught it rather than a
+ *                                                  reviewer — which is the whole point of it
+ *
+ *   ⚠️ This walk counts DECLARED export names across `src/components/`, types included, so it is
+ *   a different denominator from `ui/index.ts`'s 94 (values only, that directory only). Both are
+ *   right; neither reproduces the other. Stated here because two counts of "the exports" that
+ *   disagree by 41 look like one of them is stale.
+ *
  * Re-run it if a component gains an export; `scripts/verify-member-states.mjs` does the count, so
  * it is checked rather than remembered — which is how JH222 found out it had moved this number,
  * and how JH219 found out JH222 had, two hours later. Three cards moved it in one day; the table

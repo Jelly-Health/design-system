@@ -62,6 +62,9 @@ it does not get re-litigated as though nobody had thought about it.
 - **The member state patterns** — loading, empty, failed, and the overflow rules — added 2026-09-02
   by JH218. Not four components so much as one type that makes three of the four impossible to
   confuse: see § *The four states*.
+- **A dialog that can refuse to close** — `DialogContent`'s `onCloseAttempt`, added 2026-09-02 by
+  JH227. Read it before building a dialog-hosted form: guarding Escape alone still loses the draft
+  to two other gestures, and this covers all three. See § *The dialog's close guard*.
 - **The three member screen shells** — the task screen, the onboarding step and the portal —
   added 2026-09-02 by JH219. Each is one product decision about what a member is allowed to see and
   reach, not a layout: no navigation on a task screen, no progress meter in onboarding, no unread
@@ -155,6 +158,12 @@ their design", and connecting them to the designed vocabulary is a real design d
   move, and what shadcn ships — **cannot reach `v2` at all**, because v2 imports
   `@jelly-health/design-system/tokens.css`, not `/styles`. Six explicit classes travel with the
   components whichever entry point a consumer imports.
+- ~~**`Dialog` discards unsaved input on any close gesture.**~~ **Fixed 2026-09-02
+  ([JH227](https://trello.com/c/WLseboFW)).** `DialogContent` takes `onCloseAttempt`, and a dialog
+  that has one refuses Escape, a click outside **and** the close button, calling the handler
+  instead. The gap JH202 recorded — *"Escape always closes. No override in the current code"* — was
+  half wrong when it was written, and the wrong half is the interesting one: see
+  § *[The dialog's close guard](#the-dialogs-close-guard)*.
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
 - ~~**No wordmark.**~~ **Fixed 2026-09-01 (JH200).** `<Wordmark />` ships from the package root —
@@ -586,10 +595,75 @@ errors firing back to back" unresolved as out of its brief. Comparing message te
 toast({ id: "refill-submit-error", tier: "error", description: "Couldn't submit — check your connection" })
 ```
 
-**Dialog's Escape-always-closes gap is not resolved here.** JH202 documented it and deferred the
-fix to whoever builds a dialog-hosted form; toast doesn't host one, so it isn't resolved by this
-card either. Raised as [JH227](https://trello.com/c/WLseboFW) rather than left silently open a
-second time.
+~~**Dialog's Escape-always-closes gap is not resolved here.**~~ Raised as
+[JH227](https://trello.com/c/WLseboFW) rather than left silently open a second time, and **closed
+2026-09-02** — see § *[The dialog's close guard](#the-dialogs-close-guard)*.
+
+### The dialog's close guard
+
+`DialogContent` takes one optional prop, added by [JH227](https://trello.com/c/WLseboFW) on
+2026-09-02:
+
+```tsx
+<DialogContent onCloseAttempt={isDirty ? () => setConfirming(true) : undefined}>
+```
+
+Given one, the dialog **stops closing** on every gesture this primitive owns and calls the handler
+instead. Omit it and nothing changes — the prop is additive and the 19 ported call sites are
+untouched.
+
+**The gap JH202 recorded was half wrong, and the wrong half is the point.** It read *"Escape always
+closes. No override in the current code,"* and deferred the fix to whoever built a dialog-hosted
+form. The second sentence was already untrue of this Radix-backed port: `DialogContent` spreads
+`...props` onto `DialogPrimitive.Content`, so `onEscapeKeyDown` has been interceptable since the
+port landed — verified by type-checking a consumer that passes it, 2026-09-02. The claim was
+inherited from the *legacy* hand-rolled dialog, which had no Escape handling at all.
+
+So the defect worth fixing is not a missing hook. It is that the obvious fix **looks** complete and
+is not: a caller who intercepts `onEscapeKeyDown` alone still loses the draft to an overlay click or
+to the close button in the corner. Three gestures close this dialog, and a guard on one of them is
+the worst of the three states — the form believes it is protected. `onCloseAttempt` covers all three
+together, and that is the only reason it earns a prop over the raw Radix escape hatches it wraps.
+
+| Gesture | Intercepted at | Why prevention is what works |
+|---|---|---|
+| Escape | `Content.onEscapeKeyDown` | `DismissableLayer` runs `onEscapeKeyDown?.(e)` then `if (!e.defaultPrevented) onDismiss()` |
+| Click or focus outside | `Content.onInteractOutside` | the same `defaultPrevented` gate, on both the pointer-down-outside and focus-outside paths — one handler covers both |
+| The close button | the `X`'s `onClick` | `composeEventHandlers(props.onClick, () => onOpenChange(false))`, and `checkForDefaultPrevented` defaults to `true` |
+
+All three were read out of `@radix-ui/react-dialog@1.1.4`, `@radix-ui/react-dismissable-layer` and
+`@radix-ui/primitive` in `node_modules` rather than assumed, because "prevent the event" is a
+guess unless the library's own gate is the thing you looked at.
+
+**Two things are deliberately not guarded**, because the caller owns them and can route them to the
+same handler: a `DialogClose` the caller renders in the body or footer (a "Cancel" button — an
+explicit, intentional close), and any programmatic close through `Dialog`'s own `onOpenChange`. A
+primitive reaching into either would be overriding a decision its consumer had already made.
+
+**And no confirmation UI ships here.** "Discard your changes?" — its wording, its buttons, whether
+it offers to save instead — is a product decision, and this package's rule is that a primitive
+carries no opinion the canvases have not settled. `onCloseAttempt` is the seam; the console and
+member consumers each bring their own dialog or toast. That is also why the prop is a plain
+callback rather than a `preventClose` boolean: a boolean would block the close and leave the user
+with no explanation, which is a worse failure than losing the draft.
+
+`scripts/verify-dialog-close-guard.mjs` proves it — 17 cases, and **the negative half is the half
+that matters**: an unguarded dialog must still close on all three gestures. Deleting
+`dialogCloseGuard`'s `if (!onCloseAttempt) return null` turns every dialog in the system into one
+nobody can close, leaves all six positive cases green, and is invisible in a diff; the five negative
+cases are what catch it. All seven documented mutations were run and each failed exactly the cases
+the script's docstring names.
+
+The script **stubs nothing and renders nothing**. `DialogContent` uses no hooks, so it is called as
+a plain function and the element tree it returns is walked for the real `DialogPrimitive.Content`
+and `Close` elements — the actual props the component passes to Radix. That is stronger than
+`verify-toast.mjs`'s single stub, which existed only because `Toast.Root` swallows `duration`
+internally; here the props *are* the subject, so they can simply be read. Rendering is impossible
+anyway — `DialogPortal` is Radix's `Portal`, which calls `createPortal` and needs a live DOM.
+
+Like `verify-toast.mjs`, `verify-member-plane.mjs` and `verify-weight-computed.mjs`, it needs
+`node_modules` and so is **run manually, not in CI** — the package has no lockfile, and a check
+that needed an install would be a check that does not run.
 
 ### `cn()` knows this package's font sizes — and it did not before
 
