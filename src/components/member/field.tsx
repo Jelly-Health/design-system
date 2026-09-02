@@ -121,12 +121,15 @@ function MemberField({
       /* `--space-1` (8px) between the parts. Layout, so not `--space-half`, which tokens.css
        * reserves for optical adjustment. The gap BETWEEN fields belongs to whatever lays the form
        * out, not to the field. */
-      className={cn('flex flex-col gap-[var(--space-1)]', className)}
+      className={cn('flex min-w-0 flex-col gap-[var(--space-1)]', className)}
       {...props}
     >
       <label
         htmlFor={controlId}
-        className="text-member-body text-ink font-medium"
+        /* `break-words`: a label is a question in the member's language, not a column header —
+         * "What's the name of the pharmacy you'd like this sent to?" wraps on a phone, and a
+         * label that cannot break pushes the whole form sideways. */
+        className="text-member-body text-ink break-words font-medium"
       >
         {label}
         {optional ? (
@@ -145,7 +148,7 @@ function MemberField({
       })}
 
       {description ? (
-        <p id={descriptionId} className="text-member-caption text-ink-3">
+        <p id={descriptionId} className="text-member-caption text-ink-3 break-words">
           {description}
         </p>
       ) : null}
@@ -156,7 +159,7 @@ function MemberField({
          * `--danger-surface` fill — a filled block would compete with the control's own invalid
          * border for the same message, and the canvases give a filled danger surface to nothing at
          * this scale. */
-        <p id={errorId} role="alert" className="text-member-caption text-danger">
+        <p id={errorId} role="alert" className="text-member-caption text-danger break-words">
           {message}
         </p>
       ) : null}

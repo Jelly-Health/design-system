@@ -281,3 +281,50 @@ against the bundle this re-sync uploaded, so these are closed rather than merely
   run; see the probe section below. Being declared in `tokens.css` was never enough.
 - **20 components → 24**, the member plane no longer empty.
 - Still compiled with Tailwind **4.3.3** — keep matching it (see `build-css.mjs`).
+
+## JH218 added five previews and the project is stale until the next sync — 2026-09-02
+
+`/design-sync` was **not** run for JH218 (it is a human step, and the card scoped it out), so the
+Claude Design project is behind by one card. What the next run has to pick up:
+
+- **Five new previews**: `MemberEmpty`, `MemberError`, `MemberStateView`, `ThreadSkeleton`,
+  `ScreenSkeleton` — five new components in `src/components/member/`, taking the package from 26 to
+  31 as the sync counts them.
+- **Expect new prune entries.** The content scan surfaces every named export as a top-level
+  component, and `state.tsx` also exports `memberStateFrom` (a function, not a component) plus the
+  `MemberState` and `NonEmpty` types. Check the discovered list against the 31 real cards before
+  building and add `{Name: null}` prunes for whatever is not one — and remember the trap two
+  sections up: a **non-null** `componentSrcMap` pin kills discovery entirely.
+- **`skeleton.tsx` and `state.tsx` are `.tsx`, so the synth entry can see them.** That was
+  deliberate: the `.ts`-invisible-to-the-entry trap above is the reason the state model lives in a
+  `.tsx` file rather than the `state.ts` the console uses. `./member/*` subpaths only resolve to
+  `.tsx` as well, so a `.ts` here would have been unreachable twice over.
+- **No new `--text-*` step**, so `vocabulary-probe.tsx` needs no widening and `FONT_SIZE_STEPS`
+  needs no entry. The new components use the existing member ramp only.
+
+## The borrowed-dependency set, extended — 2026-09-02 (JH218)
+
+The recipe above covers bundling and the CSS compile. JH218 needed `esbuild`, `typescript` and
+`playwright` as well, and the one symlink to `wt-design-sync/node_modules` does **not** carry
+`esbuild` — it is not in that install. What worked, from the package root:
+
+```sh
+# everything except esbuild, from the sync worktree's install
+for p in <wt-design-sync>/node_modules/*; do ln -sfn "$p" node_modules/"$(basename "$p")"; done
+# esbuild (and its platform binary) from web-app's install
+ln -sfn <web-app>/node_modules/esbuild  node_modules/esbuild
+ln -sfn <web-app>/node_modules/@esbuild node_modules/@esbuild
+```
+
+Two things measured while doing it, both worth keeping:
+
+- 🔴 **`tsc` DOES run against that set**, which contradicts the standing "the package has never been
+  installed, so `yarn typecheck` cannot run" note — true of `yarn typecheck`, not of `tsc`. Baseline
+  on `origin/main` at `ae616b4`: **2 errors**, `RefAttributes` ref-variance in `ui/badge.tsx` and
+  `ui/button.tsx`, both artefacts of resolving two copies of `@types/react` through the borrow
+  rather than defects in the tree. The bar for a change is therefore *no new errors*, counted, not
+  "it passes".
+- **Playwright launches against the machine's cache with no download.** `playwright@1.62.1` from the
+  sync worktree drives the cached `chromium-1234` build (`~/Library/Caches/ms-playwright`) that
+  `.design-sync/NOTES.md` records for 1.62.0 — the two share a revision, so no
+  `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` dance was needed here.
