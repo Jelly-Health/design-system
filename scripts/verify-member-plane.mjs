@@ -143,8 +143,16 @@ const { Textarea } = load("src/components/ui/textarea.tsx");
 const { ToastClose, ToastAction, toastVariants } = load("src/components/ui/toast.tsx");
 const { Label } = load("src/components/ui/label.tsx");
 const Sel = load("src/components/ui/select.tsx");
+const { Checkbox } = load("src/components/ui/checkbox.tsx");
+const { Switch } = load("src/components/ui/switch.tsx");
+const RG = load("src/components/ui/radio-group.tsx");
 
 const TOUCH = "min-h-[var(--touch-min)]";
+/* The hit-target three floor differently from the type-and-height two: they expand a centred
+ * pseudo-element rather than growing the box, so the marker to look for is the pseudo's size and
+ * the reserved footprint, not `min-h`. See `checkbox.tsx`'s docstring. */
+const HIT = "before:size-[var(--touch-min)]";
+const FOOTPRINT = /\bm[xy]?-\[calc\(\(var\(--touch-min\)-[^\]]+\)\/2\)\]/;
 const planeCases = [
   ["Button plane=member reaches the touch floor", Button, { plane: "member" }, (h) => h.includes(TOUCH)],
   ["Button plane=member reaches the member body size", Button, { plane: "member" }, (h) => h.includes("text-member-body")],
@@ -172,6 +180,21 @@ const planeCases = [
   ["Label plane=member reaches the member body size", Label, { plane: "member" }, (h) => h.includes("text-member-body")],
   ["Label default stays console", Label, {}, (h) => h.includes("text-console-sm") && !h.includes("text-member-body")],
   ["Label plane does not leak to the DOM as an attribute", Label, { plane: "member" }, (h) => !/ plane=/.test(h)],
+  // The hit-target three (JH222). Each asserts three separate things, because "it got bigger" is
+  // the failure this design exists to avoid: the hit area expands, the footprint is reserved so a
+  // stacked group cannot overlap, and the PAINTED size is untouched.
+  ["Checkbox plane=member expands the hit area to the floor", Checkbox, { plane: "member" }, (h) => h.includes(HIT)],
+  ["Checkbox plane=member reserves the footprint", Checkbox, { plane: "member" }, (h) => FOOTPRINT.test(h)],
+  ["Checkbox plane=member leaves the painted box at size-4", Checkbox, { plane: "member" }, (h) => / size-4 /.test(h) && !/ size-\[var\(--touch-min\)\]/.test(h)],
+  ["Checkbox default stays console: no hit box, no footprint", Checkbox, {}, (h) => !h.includes(HIT) && !FOOTPRINT.test(h) && !h.includes("before:")],
+  ["Checkbox plane does not leak to the DOM as an attribute", Checkbox, { plane: "member" }, (h) => !/ plane=/.test(h)],
+  ["Switch plane=member expands the hit area to the floor", Switch, { plane: "member" }, (h) => h.includes(HIT)],
+  // The switch is short of the floor on both axes by DIFFERENT amounts, so it reserves
+  // asymmetrically -- a single `m-` would look right and measure wrong on one axis.
+  ["Switch plane=member reserves both axes separately", Switch, { plane: "member" }, (h) => /my-\[calc\(\(var\(--touch-min\)-1\.15rem\)\/2\)\]/.test(h) && /mx-\[calc\(\(var\(--touch-min\)-2rem\)\/2\)\]/.test(h)],
+  ["Switch plane=member leaves the painted track at h-[1.15rem] w-8", Switch, { plane: "member" }, (h) => h.includes("h-[1.15rem]") && h.includes("w-8")],
+  ["Switch default stays console: no hit box, no footprint", Switch, {}, (h) => !h.includes(HIT) && !FOOTPRINT.test(h) && !h.includes("before:")],
+  ["Switch plane does not leak to the DOM as an attribute", Switch, { plane: "member" }, (h) => !/ plane=/.test(h)],
 ];
 
 /* ── Compound primitives (JH222) ─────────────────────────────────────────────────────────────
@@ -179,6 +202,11 @@ const planeCases = [
  * renders the Root subtree and `classesOf` picks the element under test back out. Cases are
  * `[name, () => html, slot, assertion]` -- the assertion receives the CLASS LIST of that one
  * element, not the whole markup, so a class landing on the wrong sub-part cannot satisfy it. */
+const inRadioGroup = (props) =>
+  renderToStaticMarkup(
+    React.createElement(RG.RadioGroup, {}, React.createElement(RG.RadioGroupItem, { value: "a", ...props })),
+  );
+
 const inSelect = (part, props) =>
   renderToStaticMarkup(
     React.createElement(Sel.Select, { open: true }, React.createElement(part, props, "Option")),
@@ -192,6 +220,11 @@ const compoundCases = [
   ["SelectTrigger plane=member drops the console size ramp", () => inSelect(Sel.SelectTrigger, { plane: "member" }), "select-trigger", (c) => !c.includes("data-[size=default]:h-9") && !c.includes("data-[size=sm]:h-8")],
   ["SelectTrigger default stays console", () => inSelect(Sel.SelectTrigger, {}), "select-trigger", (c) => c.includes("text-console-sm") && c.includes("data-[size=default]:h-9") && !c.includes("text-member-body")],
   ["SelectTrigger plane does not leak to the DOM as an attribute", () => inSelect(Sel.SelectTrigger, { plane: "member" }), "select-trigger", (_c, h) => !/ plane=/.test(h)],
+  ["RadioGroupItem plane=member expands the hit area to the floor", () => inRadioGroup({ plane: "member" }), "radio-group-item", (c) => c.includes(HIT)],
+  ["RadioGroupItem plane=member reserves the footprint", () => inRadioGroup({ plane: "member" }), "radio-group-item", (c) => FOOTPRINT.test(c)],
+  ["RadioGroupItem plane=member leaves the painted box at size-4", () => inRadioGroup({ plane: "member" }), "radio-group-item", (c) => /(^| )size-4( |$)/.test(c)],
+  ["RadioGroupItem default stays console: no hit box, no footprint", () => inRadioGroup({}), "radio-group-item", (c) => !c.includes(HIT) && !FOOTPRINT.test(c) && !c.includes("before:")],
+  ["RadioGroupItem plane does not leak to the DOM as an attribute", () => inRadioGroup({ plane: "member" }), "radio-group-item", (_c, h) => !/ plane=/.test(h)],
 ];
 
 const html = (props) =>
@@ -315,6 +348,9 @@ for (const [name, render, slot, assertion] of compoundCases) {
 const equivalenceCases = [
   ["Label", "src/components/ui/label.tsx", (m) => renderToStaticMarkup(React.createElement(m.Label, {}, "x")), "label"],
   ["SelectTrigger", "src/components/ui/select.tsx", (m) => renderToStaticMarkup(React.createElement(m.Select, { open: true }, React.createElement(m.SelectTrigger, {}, "x"))), "select-trigger"],
+  ["Checkbox", "src/components/ui/checkbox.tsx", (m) => renderToStaticMarkup(React.createElement(m.Checkbox, {})), "checkbox"],
+  ["Switch", "src/components/ui/switch.tsx", (m) => renderToStaticMarkup(React.createElement(m.Switch, {})), "switch"],
+  ["RadioGroupItem", "src/components/ui/radio-group.tsx", (m) => renderToStaticMarkup(React.createElement(m.RadioGroup, {}, React.createElement(m.RadioGroupItem, { value: "a" }))), "radio-group-item"],
 ];
 
 for (const [name, relPath, render, slot] of equivalenceCases) {
@@ -396,6 +432,9 @@ const planedComponents = [
   ["Label", "src/components/ui/label.tsx", "Label", "labelVariants"],
   ["SelectTrigger", "src/components/ui/select.tsx", "SelectTrigger", "selectTriggerVariants"],
   ["SelectItem", "src/components/ui/select.tsx", "SelectItem", "selectItemVariants"],
+  ["Checkbox", "src/components/ui/checkbox.tsx", "Checkbox", "checkboxVariants"],
+  ["Switch", "src/components/ui/switch.tsx", "Switch", "switchVariants"],
+  ["RadioGroupItem", "src/components/ui/radio-group.tsx", "RadioGroupItem", "radioGroupItemVariants"],
 ];
 
 for (const [name, relPath, fnName, cvaName] of planedComponents) {
