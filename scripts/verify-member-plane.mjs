@@ -77,10 +77,29 @@
  *   - `SelectTrigger` member variant keeping `data-[size=default]:h-9` too -> 1
  *   - `SelectItem` member variant losing the touch floor                   -> 1
  *
- * Negative control: the unmodified tree -> 42 passed, 0 failed, rc=0.
+ * JH229 re-based the console-equivalence baseline off the live `origin/main` and onto frozen
+ * pre-axis data (see the block above `PRE_AXIS_CONSOLE`). Every mutation above still fails exactly
+ * the cases it did. These were added, each applied alone to an otherwise-passing tree:
+ *
+ *   - `Label` console emptied of `text-console-sm`, with the BASELINE REF HOLDING THE SAME BYTES
+ *     as the working tree -- i.e. the regression has already merged, which is the state every
+ *     clean checkout of `main` is in
+ *       -> the old check: `PASS  Label plane=console is class-identical to origin/main (10 before,
+ *          10 after)`. On a tree that has lost the class. The baseline moved with the code, so the
+ *          two agreed about the wrong thing.
+ *          The frozen check: `FAIL ... (11 before, 10 after -- lost [text-console-sm])`.
+ *          That pair of lines is the whole of JH229, and it is why this baseline is data.
+ *   - `SelectTrigger` console losing `data-[size=sm]:h-8`  -> 1, equivalence only (37 vs 36)
+ *   - `SelectItem` console losing `text-console-sm`        -> 2, incl. equivalence (24 vs 23)
+ *
+ * ⚠️ Before JH229, on a clean checkout of `main`, ZERO of the six console-equivalence cases could
+ * fail: five compared the tree against a copy of itself, and the sixth was reading the wrong
+ * component entirely. Now six of six can. If a change here ever drops that number back toward
+ * zero, it is the same defect returning, whatever it is called.
+ *
+ * Negative control: the unmodified tree -> 63 passed, 0 failed, rc=0.
  *
  */
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -108,30 +127,24 @@ function load(relPath) {
 const { createRequire } = await import("node:module");
 const require = createRequire(import.meta.url);
 
-/* Same loader, but from a source STRING rather than a path -- used to render the `origin/main`
- * copy of a component alongside the working-tree copy, for the console-equivalence check below. */
-function loadFrom(src) {
-  const patched = src.replace(
-    /import \{ cn \} from ['"].*?['"]/,
-    "const cn = (...a) => a.filter(Boolean).join(' ')",
-  );
-  const js = transformSync(patched, { loader: "tsx", format: "cjs", jsx: "automatic" }).code;
-  const module = { exports: {} };
-  const req = (id) => (id === "react" ? React : require(id));
-  new Function("module", "exports", "require", js)(module, module.exports, req);
-  return module.exports;
-}
-
-const gitShow = (relPath) =>
-  execFileSync("git", ["show", `origin/main:${relPath}`], { cwd: ROOT, encoding: "utf8" });
-
 /* The class list of the element carrying `data-slot="<slot>"`. The compound primitives cannot be
  * rendered alone (Radix throws "`SelectTrigger` must be used within `Select`"), so their cases
  * render the whole subtree and pick the one element under test back out of it. */
+/* React escapes `&`, `'` and `"` on the way into the attribute, so a class the source writes as
+ * `[&_svg]:shrink-0` comes back as `[&amp;_svg]:shrink-0`. Undo it, so what this returns is what
+ * the component actually says -- which is what makes the frozen baseline below greppable against
+ * the source instead of being a wall of entities nobody can check by eye. `&amp;` is decoded LAST,
+ * or a literal `&amp;#x27;` would decode twice. */
+const unescapeHtml = (s) =>
+  s
+    .replace(/&(?:#39|#x27|apos);/g, "'")
+    .replace(/&(?:quot|#34);/g, '"')
+    .replace(/&(?:amp|#38);/g, "&");
+
 function classesOf(html, slot) {
   const m = html.match(new RegExp(`data-slot="${slot}"[^>]*?\\bclass="([^"]*)"`));
   if (m === null) throw new Error(`no element with data-slot="${slot}" in: ${html.slice(0, 300)}`);
-  return m[1];
+  return unescapeHtml(m[1]);
 }
 
 const setOf = (classes) => new Set(classes.split(/\s+/).filter(Boolean));
@@ -333,18 +346,97 @@ for (const [name, render, slot, assertion] of compoundCases) {
   }
 }
 
-/* ── Console equivalence against `origin/main` (JH222) ───────────────────────────────────────
+/* ── Console equivalence against the frozen pre-axis baseline (JH222, re-based JH229) ───────
  * The 100% of call sites that are console today must render exactly what they rendered before the
  * axis existed. Giving a primitive a plane means MOVING classes out of a base string into a
  * `console` variant, and a class dropped or fat-fingered on the way is invisible in review -- the
  * component still compiles and still looks approximately right.
  *
- * So this does not restate the expected classes, which would just be the same mistake written
- * twice. It renders each primitive's `origin/main` copy and its working-tree copy with DEFAULT
- * props and compares the resolved class SETS, which is the check #16 ran by hand for `Input`
- * (34 before, 34 after, empty symmetric difference). Set rather than string: cva emits the
- * variant's classes after the base string, so the order legitimately changes and the content
- * must not. */
+ * 🔴 THE BASELINE BELOW IS FROZEN DATA, AND THAT IS THE ENTIRE POINT OF JH229.
+ *
+ * It used to be read live, with `git show origin/main:<path>`. That was correct for exactly as
+ * long as JH222 was an unmerged branch: the moment JH222 merged, `origin/main` BECAME the after
+ * state, and five of these six cases were comparing the working tree against itself. They did not
+ * go red -- they went VACUOUS. `62 passed, 1 failed` with five of the passes proving nothing.
+ *
+ * `git merge-base HEAD origin/main` is the tempting fix and it is the same bug wearing a hat: on a
+ * branch cut from `origin/main` that touches no primitive, the merge-base IS `HEAD`, so the
+ * baseline is once again the thing under test. A check whose notion of the truth comes from its
+ * own subject cannot fail, and it passes exactly as convincingly as a real one.
+ *
+ * So the expectation is ABSOLUTE. These are the classes each primitive shipped with at `6472904`
+ * -- the last commit before the plane axis existed, i.e. the first parent of JH222's merge. They
+ * were captured by RENDERING that ref, not retyped from it. Re-derive any row with:
+ *
+ *     git show 6472904:src/components/ui/<file>.tsx
+ *
+ * Compared as SETS, so order and duplicates do not matter: cva emits the variant's classes after
+ * the base string, so the order legitimately changes while the content must not. This is the check
+ * #16 ran by hand for `Input` (34 before, 34 after, empty symmetric difference), made permanent.
+ *
+ * ⚠️ A red case here means the console plane MOVED. Fix the component; or, if the change is
+ * genuinely intended, edit these classes in the same commit so the diff shows a human deciding it.
+ * Re-pointing this at any moving ref to turn it green re-creates the JH229 defect exactly.
+ *
+ * Verified while fixing JH229: nothing had actually drifted between `6472904` and `b264d78`. The
+ * guard had stopped being able to see, not stopped being satisfied. */
+const PRE_AXIS_CONSOLE = {
+  // Label -- 11 classes
+  Label: `
+    flex font-medium gap-2 group-data-[disabled=true]:opacity-50
+    group-data-[disabled=true]:pointer-events-none items-center leading-none
+    peer-disabled:cursor-not-allowed peer-disabled:opacity-50 select-none text-console-sm
+  `,
+  // SelectTrigger -- 37 classes
+  SelectTrigger: `
+    *:data-[slot=select-value]:flex *:data-[slot=select-value]:gap-2
+    *:data-[slot=select-value]:items-center *:data-[slot=select-value]:line-clamp-1
+    [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground
+    [&_svg]:pointer-events-none [&_svg]:shrink-0 aria-invalid:border-destructive
+    aria-invalid:ring-destructive/20 bg-transparent border border-input
+    dark:aria-invalid:ring-destructive/40 dark:bg-input/30 dark:hover:bg-input/50
+    data-[placeholder]:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8
+    disabled:cursor-not-allowed disabled:opacity-50 flex focus-visible:border-ring
+    focus-visible:ring-[3px] focus-visible:ring-ring/50 gap-2 items-center justify-between
+    outline-none px-3 py-2 rounded-md shadow-xs text-console-sm transition-[color,box-shadow]
+    w-fit whitespace-nowrap
+  `,
+  // SelectItem -- 24 classes
+  SelectItem: `
+    *:[span]:last:flex *:[span]:last:gap-2 *:[span]:last:items-center
+    [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground
+    [&_svg]:pointer-events-none [&_svg]:shrink-0 cursor-default data-[disabled]:opacity-50
+    data-[disabled]:pointer-events-none flex focus:bg-accent focus:text-accent-foreground gap-2
+    items-center outline-hidden pl-2 pr-8 py-1.5 relative rounded-sm select-none text-console-sm
+    w-full
+  `,
+  // Checkbox -- 22 classes
+  Checkbox: `
+    aria-invalid:border-destructive aria-invalid:ring-destructive/20 border border-input
+    dark:aria-invalid:ring-destructive/40 dark:bg-input/30 dark:data-[state=checked]:bg-primary
+    data-[state=checked]:bg-primary data-[state=checked]:border-primary
+    data-[state=checked]:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50
+    focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none
+    peer rounded-[4px] shadow-xs shrink-0 size-4 transition-shadow
+  `,
+  // Switch -- 20 classes
+  Switch: `
+    border border-transparent dark:data-[state=unchecked]:bg-input/80
+    data-[state=checked]:bg-primary data-[state=unchecked]:bg-input disabled:cursor-not-allowed
+    disabled:opacity-50 focus-visible:border-ring focus-visible:ring-[3px]
+    focus-visible:ring-ring/50 h-[1.15rem] inline-flex items-center outline-none peer
+    rounded-full shadow-xs shrink-0 transition-all w-8
+  `,
+  // RadioGroupItem -- 19 classes
+  RadioGroupItem: `
+    aria-invalid:border-destructive aria-invalid:ring-destructive/20 aspect-square border
+    border-input dark:aria-invalid:ring-destructive/40 dark:bg-input/30
+    disabled:cursor-not-allowed disabled:opacity-50 focus-visible:border-ring
+    focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none rounded-full shadow-xs
+    shrink-0 size-4 text-primary transition-[color,box-shadow]
+  `,
+};
+
 const equivalenceCases = [
   ["Label", "src/components/ui/label.tsx", (m) => renderToStaticMarkup(React.createElement(m.Label, {}, "x")), "label"],
   ["SelectTrigger", "src/components/ui/select.tsx", (m) => renderToStaticMarkup(React.createElement(m.Select, { open: true }, React.createElement(m.SelectTrigger, {}, "x"))), "select-trigger"],
@@ -357,8 +449,8 @@ for (const [name, relPath, render, slot] of equivalenceCases) {
   let ok = false;
   let detail = "";
   try {
-    const before = setOf(classesOf(render(loadFrom(gitShow(relPath))), slot));
-    const after = setOf(classesOf(render(loadFrom(readFileSync(join(ROOT, relPath), "utf8"))), slot));
+    const before = setOf(PRE_AXIS_CONSOLE[name]);
+    const after = setOf(classesOf(render(load(relPath)), slot));
     const lost = [...before].filter((c) => !after.has(c));
     const gained = [...after].filter((c) => !before.has(c));
     ok = lost.length === 0 && gained.length === 0;
@@ -367,7 +459,7 @@ for (const [name, relPath, render, slot] of equivalenceCases) {
   } catch (e) {
     detail = `threw: ${e.message}`;
   }
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name} plane=console is class-identical to origin/main (${detail})`);
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name} plane=console matches the pre-axis baseline (${detail})`);
   if (ok) pass += 1;
   else fail += 1;
 }
@@ -385,17 +477,15 @@ for (const [name, relPath, render, slot] of equivalenceCases) {
 const itemConsole = setOf(Sel.selectItemVariants({}));
 const itemMember = setOf(Sel.selectItemVariants({ plane: "member" }));
 
-/* origin/main's `SelectItem` has no cva function to call, so its expectation is read out of the
- * source: the class literal in the `cn(...)` that follows its `data-slot`. Extraction failing is
- * a FAILURE, never a skip -- a check that quietly stops checking reports OK on a broken tree. */
-function baseLiteralFor(src, slot) {
-  const at = src.indexOf(`data-slot="${slot}"`);
-  if (at === -1) return null;
-  const m = src.slice(at).match(/cn\(\s*\n?\s*(["'])([\s\S]*?)\1/);
-  return m === null ? null : m[2];
-}
-
-const mainItemBase = baseLiteralFor(gitShow("src/components/ui/select.tsx"), "select-item");
+/* `SelectItem` uses the same frozen baseline as the rendered cases above, which is the second
+ * thing JH229 fixed. It used to scrape `origin/main`'s source for the class literal in the `cn(...)`
+ * after its `data-slot`, because the pre-axis component had no cva function to call. Once JH222
+ * merged, that literal no longer existed -- `SelectItem` now reads `cn(selectItemVariants({ plane }),
+ * className)` -- so the regex slid PAST it to the next `cn("...")` in the file and silently scraped
+ * `SelectSeparator` instead. That is why this one case was red while the five above were green: it
+ * was comparing `SelectItem` against a horizontal rule (`bg-border pointer-events-none -mx-1 my-1
+ * h-px`, 5 classes). Not self-reference but a wrong subject -- and a check reading the wrong subject
+ * is worse than one reading none, because its failure looks like a real finding. */
 
 const derivedCases = [
   ["SelectItem plane=member reaches the touch floor", () => itemMember.has(TOUCH)],
@@ -404,13 +494,12 @@ const derivedCases = [
   /* Reported with its counts, like the rendered equivalence cases above, so the number never has
    * to be recalled or guessed by anyone quoting this check. */
   () => {
-      if (mainItemBase === null) return ["SelectItem plane=console is class-identical to origin/main (could not read the origin/main base literal)", false];
-      const before = setOf(mainItemBase);
+      const before = setOf(PRE_AXIS_CONSOLE.SelectItem);
       const lost = [...before].filter((c) => !itemConsole.has(c));
       const gained = [...itemConsole].filter((c) => !before.has(c));
       const ok = lost.length === 0 && gained.length === 0;
       return [
-        `SelectItem plane=console is class-identical to origin/main (${before.size} before, ` +
+        `SelectItem plane=console matches the pre-axis baseline (${before.size} before, ` +
           `${itemConsole.size} after` +
           (ok ? ")" : ` -- lost [${lost.join(" ")}] gained [${gained.join(" ")}])`),
       ok,

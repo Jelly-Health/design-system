@@ -60,9 +60,24 @@
  *   - SPACE originally required the footprint to be `>= floor`. That catches under-reserving and
  *     is blind to over-reserving, so the symmetric-margin mutation passed. It now requires the
  *     footprint to MATCH max(painted, floor).
+ *   - PAINT's second baseline, `origin/main`, was the first bug again on a delay (JH229). It was
+ *     right for as long as JH222 was an unmerged branch and self-referential from the moment it
+ *     merged. Worse, the pre-axis `cn("...")` literal it scraped stopped existing, so from
+ *     2026-09-02 this script REJECTED every run -- it went dead rather than quiet, which is the
+ *     one thing it got right. It is now a frozen absolute size (`PAINTED_BOX`) that no future
+ *     merge can move. Found by reading it, not by a mutation: nobody was running it, because
+ *     8 of the 9 node verifiers are not in `verify.yml`.
+ *
+ * JH229 re-ran the list against the frozen baseline. Same catches, and the one that matters:
+ *
+ *   - grow Checkbox's painted box in the BASE string with the drift ALREADY IN THE REF
+ *       -> PAINT on both planes (44×44 drawn, 16×16 specified) and SPACE (72×72 reserved). The
+ *          `origin/main` baseline could not have caught this once it merged. A frozen number
+ *          cannot stop catching it.
  *
  * Negative control: the unmodified tree -> rc=0, all three controls 8/8, no stacked point
- * resolving to a neighbour.
+ * resolving to a neighbour. That is 21 live assertions (3 subjects x HIT/PAINT×2/SPACE/QUIET/NOOP,
+ * plus 3 STACK). Before JH229 it was ZERO: the script exited 1 before measuring anything.
  *
  * ⚠️ `Switch`'s reserved height measures 43.990625px rather than 44. `h-[1.15rem]` is 18.4px in
  * arithmetic and 18.390625px once Chromium has rounded it to 1/64px, and the margin derived from
@@ -73,7 +88,6 @@
  */
 import { compile } from '@tailwindcss/node'
 import { chromium } from 'playwright'
-import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -106,35 +120,50 @@ const { radioGroupItemVariants } = load('src/components/ui/radio-group.tsx')
  * rather than restated here: a copy of the expected classes is a second place to be wrong, and it
  * would keep passing after the component stopped agreeing with it. */
 const SUBJECTS = [
-  { name: 'Checkbox', variants: checkboxVariants, path: 'src/components/ui/checkbox.tsx', slot: 'checkbox' },
-  { name: 'Switch', variants: switchVariants, path: 'src/components/ui/switch.tsx', slot: 'switch' },
-  { name: 'RadioGroupItem', variants: radioGroupItemVariants, path: 'src/components/ui/radio-group.tsx', slot: 'radio-group-item' },
+  { name: 'Checkbox', variants: checkboxVariants },
+  { name: 'Switch', variants: switchVariants },
+  { name: 'RadioGroupItem', variants: radioGroupItemVariants },
 ]
 
-/* PAINT's baseline is `origin/main`, NOT this tree's own console plane.
+/* PAINT's expectation is an ABSOLUTE, FROZEN size. It is neither this tree's own console plane nor
+ * any ref, and both of those are mistakes this check has actually made (JH229).
  *
- * Comparing member against console is what this script did first, and it is circular: growing the
- * painted box in the BASE string moves both planes together, the two stay equal, and the check
- * reports OK on exactly the mistake it exists to catch. Caught by mutation, which is the only
- * reason it is not still written that way. So the baseline comes from the ref, where the painted
- * box is whatever shipped and cannot be moved by this diff.
+ *   1. Comparing member against this tree's CONSOLE plane is circular: growing the painted box in
+ *      the BASE string moves both planes together, the two stay equal, and the check reports OK on
+ *      exactly the mistake it exists to catch. Caught by mutation.
+ *   2. So it was re-pointed at `git show origin/main:<path>`, scraping the class literal out of the
+ *      `cn(...)` after each `data-slot`. That was correct only while JH222 was an UNMERGED branch.
+ *      Once it merged, `origin/main` was the after state, and the pre-axis `cn("...")` literal it
+ *      scraped no longer existed at all -- every component now reads `cn(<cva>({ plane }), ...)`.
+ *      To its credit this script rejected outright rather than skipping, so it went dead rather
+ *      than quiet; but a baseline that follows the code is the defect either way.
  *
- * Extraction failing is a FAILURE, never a skip. */
-function baseLiteralFor(src, slot) {
-  const at = src.indexOf(`data-slot="${slot}"`)
-  if (at === -1) return null
-  const m = src.slice(at).match(/cn\(\s*\n?\s*(["'])([\s\S]*?)\1/)
-  return m === null ? null : m[2]
+ * `git merge-base HEAD origin/main` is the tempting third version and it is bug 1 again: on a
+ * branch cut from `origin/main` that touches no primitive, the merge-base IS `HEAD`.
+ *
+ * These are the painted boxes as they shipped, MEASURED (by this script's own fixture, against
+ * `6472904` -- the last commit before the plane axis existed) rather than read off the current
+ * tree, because a number captured from the subject under test is the same tautology in a new
+ * costume. They are a decision now, not an observation: the member plane must expand the HIT area
+ * and leave these alone.
+ *
+ * ⚠️ Changing a number here is changing the design of the control. Do it in the same commit as the
+ * component, and argue it -- never sync it to turn a red run green.
+ *
+ * `Switch`'s height is the arithmetic value of `h-[1.15rem]` (1.15 x 16px). Chromium reports
+ * 18.390625 after rounding to 1/64px; the half-pixel tolerance below absorbs it. See the note at
+ * the end of the header. */
+const PAINTED_BOX = {
+  Checkbox: { w: 16, h: 16 }, // size-4
+  Switch: { w: 32, h: 18.4 }, // w-8 h-[1.15rem]
+  RadioGroupItem: { w: 16, h: 16 }, // size-4
 }
 
 for (const s of SUBJECTS) {
-  const src = execFileSync('git', ['show', `origin/main:${s.path}`], { cwd: ROOT, encoding: 'utf8' })
-  s.mainClasses = baseLiteralFor(src, s.slot)
-  if (s.mainClasses === null) {
+  if (PAINTED_BOX[s.name] === undefined) {
     console.error(
-      `FAIL: could not read ${s.name}'s painted box from origin/main:${s.path}. This script ` +
-        `could not construct its own baseline, so nothing below would be proved. Rejected ` +
-        `rather than skipped.`,
+      `FAIL: ${s.name} has no entry in PAINTED_BOX, so this script has no expectation to hold it ` +
+        `to and nothing below would be proved for it. Rejected rather than skipped.`,
     )
     process.exit(1)
   }
@@ -145,7 +174,7 @@ const GROUP_CLASSES = 'grid gap-3' // RadioGroup's real default, not a stand-in
 const utilities = [
   ...new Set(
     SUBJECTS.flatMap((s) => [s.variants({}), s.variants({ plane: 'member' })])
-      .concat(GROUP_CLASSES, ...SUBJECTS.map((s) => s.mainClasses))
+      .concat(GROUP_CLASSES)
       .flatMap((c) => c.split(/\s+/))
       .filter(Boolean),
   ),
@@ -161,9 +190,6 @@ const built = (
 const body =
   SUBJECTS.map(
     (s) => `<div style="margin:120px">
-       <button id="${s.name}-main" class="${s.mainClasses}"></button>
-     </div>
-     <div style="margin:120px">
        <button id="${s.name}-console" class="${s.variants({})}"></button>
      </div>
      <div style="margin:120px">
@@ -264,7 +290,7 @@ try {
 
       return {
         floor,
-        controls: names.flatMap((n) => [describe(`${n}-main`), describe(`${n}-console`), describe(`${n}-member`)]),
+        controls: names.flatMap((n) => [describe(`${n}-console`), describe(`${n}-member`)]),
         stack,
       }
     },
@@ -282,7 +308,7 @@ const rows = []
 const near = (a, b) => Math.abs(a - b) < 0.5
 
 for (const { name } of SUBJECTS) {
-  const main = byId[`${name}-main`]
+  const want = PAINTED_BOX[name]
   const con = byId[`${name}-console`]
   const mem = byId[`${name}-member`]
 
@@ -296,12 +322,12 @@ for (const { name } of SUBJECTS) {
     )
   }
 
-  // 2. PAINT — against origin/main, on both planes, so a base-string change cannot hide here
+  // 2. PAINT — against the frozen size, on both planes, so a base-string change cannot hide here
   for (const [planeName, got] of [['console', con], ['member', mem]]) {
-    if (!near(main.paint.w, got.paint.w) || !near(main.paint.h, got.paint.h)) {
+    if (!near(want.w, got.paint.w) || !near(want.h, got.paint.h)) {
       failures.push(
-        `PAINT: ${name} plane=${planeName} draws ${got.paint.w}×${got.paint.h}, but origin/main ` +
-          `draws ${main.paint.w}×${main.paint.h}. The member plane must expand the HIT area and ` +
+        `PAINT: ${name} plane=${planeName} draws ${got.paint.w}×${got.paint.h}, but it is ` +
+          `specified to draw ${want.w}×${want.h}. The member plane must expand the HIT area and ` +
           `leave the painted box alone — growing the box is the wrong fix the docstrings argue ` +
           `against, and it is the one a reviewer is least likely to challenge because the control ` +
           `really does reach the floor.`,
@@ -315,11 +341,11 @@ for (const { name } of SUBJECTS) {
    * on `Switch` reserves 60px of width for a 44px hit area, which passes "at least the floor"
    * while pushing everything beside it 16px away for no reason. Caught by mutation. A control
    * wider than the floor reserves its own width, hence max(). */
-  const want = { w: Math.max(main.paint.w, floor), h: Math.max(main.paint.h, floor) }
-  if (!near(mem.footprint.w, want.w) || !near(mem.footprint.h, want.h)) {
+  const reserve = { w: Math.max(want.w, floor), h: Math.max(want.h, floor) }
+  if (!near(mem.footprint.w, reserve.w) || !near(mem.footprint.h, reserve.h)) {
     failures.push(
       `SPACE: ${name} plane=member reserves ${mem.footprint.w}×${mem.footprint.h} of layout, ` +
-        `expected ${want.w}×${want.h}. Under-reserving takes area from whatever sits next to it ` +
+        `expected ${reserve.w}×${reserve.h}. Under-reserving takes area from whatever sits next to it ` +
         `(see STACK); over-reserving pushes its neighbours away for nothing.`,
     )
   }
@@ -346,7 +372,7 @@ for (const { name } of SUBJECTS) {
 
   rows.push([
     name,
-    `${main.paint.w}×${main.paint.h}`,
+    `${want.w}×${want.h}`,
     `${mem.paint.w}×${mem.paint.h}`,
     `${mem.before.w}×${mem.before.h}`,
     `${mem.footprint.w}×${mem.footprint.h}`,
@@ -370,7 +396,7 @@ for (const s of stack) {
 
 const w = [16, 14, 14, 14, 14, 6]
 console.log(
-  ['control', 'paint main', 'paint member', 'hit box', 'footprint', 'pts']
+  ['control', 'paint spec', 'paint member', 'hit box', 'footprint', 'pts']
     .map((h, i) => h.padEnd(w[i]))
     .join(''),
 )
