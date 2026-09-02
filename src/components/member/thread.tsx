@@ -93,10 +93,17 @@ function ThreadEvent({
       {action ? (
         /* The action is a member's tap target, so the row owns the `--touch-min` floor rather than
          * hoping whatever link is passed in happens to clear it. That is not a hypothetical:
-         * measured 2026-09-02, all 20 size utilities in this package's primitives are
-         * `text-console-*`, and `Button` stands at `h-10` (40px) — below the 44px member floor
-         * `tokens.css` calls non-negotiable. A member composition cannot assume a primitive it
-         * receives is member-sized, so it enforces the floor on the slot it controls. */
+         * re-measured 2026-09-02, all 21 size utilities in this package's primitives are
+         * `text-console-*` (18 of them `text-console-sm`, i.e. 12px), and `Button`'s DEFAULT size
+         * is `h-9` — 36px, not the 40px this comment first claimed, which is `size="lg"`. Every
+         * one of the six sizes is below the 44px member floor `tokens.css` calls non-negotiable.
+         *
+         * ⚠️ What a wrapper can do about that is limited, and this line is the limit: a container
+         * can only set a minimum on the box IT owns, so this produces a 44px row with whatever the
+         * consumer passed sitting inside it at its own height. The row clears the floor; the thing
+         * a member actually taps may not. The real fix is `plane="member"` on the control itself
+         * (JH212, second slice) — see `Input`'s docstring. Prefer passing a member-plane control
+         * here; this floor stays as the backstop for anything else. */
         <div className="text-member-caption mt-1 flex min-h-[var(--touch-min)] items-center justify-center font-medium">
           {action}
         </div>

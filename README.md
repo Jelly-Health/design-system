@@ -56,7 +56,9 @@ it does not get re-litigated as though nobody had thought about it.
   Grotesk* until 2026-09-01; that typeface was retired during the design pass and the sentence had
   simply been left behind — the table below has been right since JH206.)
 - `cn()`, so a component from this package and a component written in an app resolve class conflicts
-  identically.
+  identically — and, since 2026-09-02, resolve them *correctly*: it now tells tailwind-merge which
+  `text-*` names are font sizes, without which they were being silently deleted by colour classes
+  and vice versa. See § *`cn()` knows this package's font sizes*.
 
 ## What landed, and what is still absent
 
@@ -98,14 +100,20 @@ their design", and connecting them to the designed vocabulary is a real design d
   (`brand-300` ×19, `brand-700` ×2, `brand-025` ×1). It is re-pointed onto roles so those sites stay
   on-palette; it should shrink to nothing as they are touched.
 - ~~**There is no member/marketing type ramp.**~~ **Fixed 2026-09-01 (JH214).** Five role-named
-  steps, `--text-member-caption` through `--text-member-section` — see § *Type*. What survives as
-  a gap is one tier out: **the nineteen primitives are still typed at console density.** Measured
-  on `main`, all 20 size utilities in `src/components/` are `text-console-*`, 18 of them
-  `text-console-sm` (12px), and none is a member token — so a member surface assembled from these
-  primitives starts a quarter below the floor even now that the ramp exists. The tokens are only
-  half the answer; the variant matrix that lets `Button`, `Label` and `Input` switch density is
-  [JH212](https://trello.com/c/mSYl9w68). The same applies to `--touch-min`: Button's tallest size
-  is `h-10` (40px) against a 44px floor, which is why `Jelly-Health/website` overrides both by hand.
+  steps, `--text-member-caption` through `--text-member-section` — see § *Type*.
+- **The primitives are typed and sized at console density, and only three of them can opt out yet.**
+  Re-measured on `main` 2026-09-02: all **21** size utilities in `src/components/` are
+  `text-console-*`, **18** of them `text-console-sm` (12px), and none is a member token. `--touch-min`
+  is worse than the earlier note here claimed — it said Button's tallest size was 40px against the
+  44px floor, but the relevant number is the DEFAULT, `h-9` = **36px**, and **all six** sizes are
+  under the floor. This is why `Jelly-Health/website` overrides both by hand.
+
+  **Partly closed 2026-09-02 (JH212).** `Button`, `Input` and `Textarea` now take `plane="member"` —
+  see § *The button matrix*. The remaining gap is the rest of the set: `Label`, `Checkbox`,
+  `RadioGroup`, `Select` and `Switch` have no member plane, so a member form built from those still
+  starts below the floor. Take them as their first real consumer needs them rather than in one sweep,
+  and note that `Checkbox`, `RadioGroup` and `Switch` are hit-target problems as much as type ones —
+  `Checkbox` is `size-4` (16px), which no font size can fix.
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
 - ~~**No wordmark.**~~ **Fixed 2026-09-01 (JH200).** `<Wordmark />` ships from the package root —
@@ -330,6 +338,75 @@ picks `text-accent-ink` (a page surface) or `text-accent-on-accent` (a filled on
 entirely (see the alias table above). Size is left to the consumer for the same reason a hero, a
 nav bar and a footer are not the same size.
 
+### The button matrix
+
+The component has always taken these variants. What it has never had is a record of which set is
+*intended*, so every consumer inferred it from the source and guessed which combinations were meant
+to exist. Writing it down is the whole of this piece — the card asked for the decision recorded, not
+for another specimen page to keep in sync with the code.
+
+| Axis | Values | Notes |
+|---|---|---|
+| `variant` | `default` · `destructive` · `outline` · `secondary` · `ghost` · `link` | `default` is the accent fill. |
+| `size` | `default` 36px · `sm` 32px · `lg` 40px · `icon` 36px · `icon-sm` 32px · `icon-lg` 40px | Console heights. All six sit under the 44px member floor. |
+| `plane` | `console` (default) · `member` | Raises the control to `--touch-min` and `--text-member-body`. |
+
+Four rules the type system cannot enforce and a reviewer has to:
+
+- **`destructive` is the only semantic variant, and nothing sits above or below it.** There is no
+  warning tier and no priority ramp anywhere in this system, by product decision. An action that
+  needs more weight than `destructive` needs a confirmation step, not a redder button.
+- **`link` is still a button.** It is an action styled quietly; an anchor is what navigates. On the
+  member plane it takes the touch floor like everything else, which is why `plane` applies across
+  the whole matrix rather than only to `default`.
+- **`plane` is a separate axis from `size`, not a seventh size.** They answer different questions —
+  `size` is how prominent this button is among its neighbours, `plane` is which product it is in —
+  and collapsing them would make a small member button unrepresentable. They compose without a
+  compound-variant table because `min-height` beats `height`: `size="default"`'s `h-9` is simply
+  raised to 44px and left inert in the class list.
+- **There is no `loading` variant, and adding one is a bigger decision than it looks.** A loading
+  button has to hold its width while its label is replaced, name the state to a screen reader, and
+  decide whether it blocks a second submit — three behaviours, not a style. It stays a consumer
+  concern until a real screen needs it, at which point it is a component and not a variant.
+
+**Member sizing is a property of the control, not of the layout around it.** This was the open
+question in the card and the answer is forced rather than chosen: a wrapper can only set a minimum on
+the box it owns, so wrapping a 36px button in a 44px row produces a row that clears the floor and a
+tap target that does not. `ThreadEvent` does exactly that today and its docstring is careful to say
+it enforces the floor on "the slot it controls" — which is the most any composition can do for a
+primitive it does not own. Hence `plane` on the primitives.
+
+```tsx
+<Button plane="member">Continue</Button>              {/* 44px, 16px label */}
+<Button plane="member" variant="ghost" size="icon" />  {/* 44×44 */}
+```
+
+### `cn()` knows this package's font sizes — and it did not before
+
+`src/lib/utils.ts` extends tailwind-merge with the seventeen `--text-*` step names. Without that,
+tailwind-merge classifies a `text-*` class by validating its value: a recognised t-shirt size is a
+font size, and **anything it does not recognise falls through to the text-colour group**. Every size
+name here is custom, so `text-console-sm`, `text-member-body` and `text-h1` all shared a group with
+`text-ink`, `text-danger` and the rest — and two classes in one group means the later one wins and
+the earlier is deleted.
+
+That was shipping. Measured on `main` 2026-09-02: **18 classes silently deleted across 9 of the 23
+components** — 12 font sizes and 6 colours, since whichever comes first is the one destroyed. Among
+them `text-member-body` on all four `MessageBubble` voices, so the component whose docstring measures
+its contrast at the member body size was rendering at whatever size it inherited. No error, no
+warning, nothing in a diff to review.
+
+`scripts/verify-class-merge.mjs` is the guard, and it reads the true list of sizes from `tokens.css`
+rather than from the list it is checking — the first cut did the latter, and all three of its
+positive mutations reported OK. **A new `--text-*` step must be added to `FONT_SIZE_STEPS` as well as
+to `tokens.css`; the script fails when the two disagree, in either direction.**
+
+One deliberate side effect: font size conflicts with `leading-*` in tailwind-merge, so
+`leading-none text-console-sm` now resolves to just the size. That is correct here rather than merely
+tolerable — JH215 paired every step with a `--text-<step>--line-height`, so a size utility really
+does carry a leading and really does override one written before it. Written after it, `leading-*`
+still wins.
+
 ### The member compositions
 
 `src/components/member/` — JH212. Not primitives: a primitive is an atom with no opinion about the
@@ -380,10 +457,58 @@ drops every utility these components introduce — no error, dev or prod. Point 
 `src/components/**/*.tsx` instead, which also picks up `brand/` (never covered) and anything added
 later.
 
-⚠️ **A member composition cannot assume a primitive is member-sized.** Measured 2026-09-02: all 20
-size utilities in `src/components/` are `text-console-*`, and `Button` stands at `h-10` (40px),
-below the 44px `--touch-min` floor. `ThreadEvent` therefore enforces the floor on the action slot it
-owns. Reconciling the primitives themselves is open — see *Known gaps*.
+⚠️ **A member composition cannot assume a primitive is member-sized.** Re-measured 2026-09-02: all
+**21** size utilities in `src/components/` are `text-console-*`, and `Button`'s default size is
+`h-9` (**36px**, not the 40px an earlier note here claimed — that is `size="lg"`), with all six
+sizes under the 44px `--touch-min` floor. `ThreadEvent` enforces the floor on the action slot it
+owns, which is the most a wrapper can do; pass `plane="member"` to fix the control itself.
+
+#### `MemberField` — a labelled field
+
+Label, control, description, error. Three of its four decisions come from the canvases rather than
+from preference, and the first one is the one worth reading:
+
+1. **There is no required marker.** The Onboarding canvas draws every field as a bare label —
+   `Full name`, `Email`, `State`, `Date of birth`, `Mobile number` — and marks exactly one, the
+   free-text box on step 1: *"Say more, if you want (optional)"*. It marks the **optional** field,
+   in words, in the label. That is the inverse of the usual convention and correct here: nearly
+   every field in an eleven-step onboarding is required, so marking required decorates almost
+   everything and distinguishes nothing. It also fits the canvas's own thesis — *"Starts as a
+   website, becomes a conversation, never becomes a form"* — where an asterisk column is the most
+   form-like thing a screen can grow. Hence one prop, `optional`, which drives both the marker and
+   `required` on the control so the two cannot disagree.
+2. **An error is a message, or it does not exist.** There is no `invalid` prop: a non-empty `error`
+   string *is* the invalid state, and a blank or whitespace-only value is treated as no error rather
+   than as an error that failed to say anything. This is the house error-vs-empty rule at field
+   scale — a red outline around a blank box is exactly what "you have not filled this in yet" looks
+   like, and that is what an `invalid` flag plus a separately-supplied message produces the day the
+   message arrives empty. The description is shown alongside the error, never replaced by it.
+3. **The description is ours, not the canvas's**, and is flagged as such in the source — the canvases
+   put supporting prose at screen level, above the fields, never under one input. Prefer that; reach
+   for `description` when the sentence genuinely belongs to a single control.
+4. **A render prop, because the wiring has to reach a control this component does not own.** Cloning
+   the child would do it invisibly and would silently do nothing for a fragment or a wrapper.
+
+```tsx
+import { MemberField } from "@jelly-health/design-system/member/field";
+
+<MemberField label="Mobile number" description="For refill updates." error={errors.phone}>
+  {(field) => <Input plane="member" type="tel" {...field} />}
+</MemberField>
+```
+
+`plane="member"` is the consumer's to pass and deliberately not forced — this component cannot know
+its child is one of ours, and a wrapper cannot resize a control it does not own.
+
+Contrast for both message roles was measured against every surface a member field can land on,
+2026-09-02, both themes. All twelve pairings clear 4.5:1; the floor is `--ink-3` on `--sur` in light
+at **5.14:1**.
+
+`scripts/verify-member-plane.mjs` renders these components and asserts what their docstrings claim —
+20 cases, mutation-tested against six ways of breaking them. Two of those mutations are bugs this
+work actually shipped and then caught: the optional marker rendering on every field that was not
+explicitly required, and `Button` declaring `plane` without ever destructuring it, so the prop
+leaked to the DOM and the variant did nothing while type-checking clean.
 
 ---
 
