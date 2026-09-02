@@ -1,0 +1,76 @@
+{
+  "projectId": "8e452273-ae49-4146-93c6-db96213c5fdc",
+  "shape": "package",
+  "pkg": "@jelly-health/design-system",
+  "globalName": "JellyDS",
+  "cssEntry": ".design-sync/.cache/compiled-styles.css",
+  "componentSrcMap": {
+    "AccordionContent": null,
+    "AccordionItem": null,
+    "AccordionTrigger": null,
+    "AlertDescription": null,
+    "AlertTitle": null,
+    "AvatarFallback": null,
+    "AvatarImage": null,
+    "CardAction": null,
+    "CardContent": null,
+    "CardDescription": null,
+    "CardFooter": null,
+    "CardHeader": null,
+    "CardTitle": null,
+    "DialogClose": null,
+    "DialogContent": null,
+    "DialogDescription": null,
+    "DialogFooter": null,
+    "DialogHeader": null,
+    "DialogOverlay": null,
+    "DialogPortal": null,
+    "DialogTitle": null,
+    "DialogTrigger": null,
+    "PopoverContent": null,
+    "PopoverTrigger": null,
+    "RadioGroupItem": null,
+    "ScrollBar": null,
+    "SelectContent": null,
+    "SelectGroup": null,
+    "SelectItem": null,
+    "SelectLabel": null,
+    "SelectScrollDownButton": null,
+    "SelectScrollUpButton": null,
+    "SelectSeparator": null,
+    "SelectTrigger": null,
+    "SelectValue": null,
+    "TableBody": null,
+    "TableCaption": null,
+    "TableCell": null,
+    "TableFooter": null,
+    "TableHead": null,
+    "TableHeader": null,
+    "TableRow": null,
+    "TabsContent": null,
+    "TabsList": null,
+    "TabsTrigger": null,
+    "TooltipContent": null,
+    "TooltipProvider": null,
+    "TooltipTrigger": null
+  },
+  "overrides": {
+    "Dialog": {
+      "cardMode": "single",
+      "viewport": "480x360"
+    },
+    "Popover": {
+      "cardMode": "single",
+      "viewport": "320x200"
+    },
+    "Tooltip": {
+      "cardMode": "single",
+      "viewport": "320x160"
+    },
+    "Select": {
+      "cardMode": "single",
+      "viewport": "320x280"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

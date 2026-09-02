@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "../../src/styles/index.css";
+@source "../../src/components/**/*.tsx";
+@source "../previews/**/*.tsx";
+@source "./vocabulary-probe.tsx";

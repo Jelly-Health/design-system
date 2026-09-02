@@ -2,3 +2,12 @@ node_modules/
 .DS_Store
 *.tsbuildinfo
 .yarn/
+
+# design-sync (JH216) -- staged converter scripts, build output, and campaign-local
+# verification state. The durable set (.design-sync/config.json, NOTES.md, conventions.md,
+# previews/, scripts/, overrides/) is committed; everything below regenerates from it.
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

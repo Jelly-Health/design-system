@@ -1,0 +1,26 @@
+import { Label, Input } from "@jelly-health/design-system";
+
+/**
+ * `Label` cannot render standalone — it needs an `htmlFor` pointing at a real control. Ported from
+ * `v2/app/design-system/page.tsx`'s "Form controls" section, which pairs it with `Input` this way.
+ */
+export function Default() {
+  return (
+    <div className="w-72 space-y-2">
+      <Label htmlFor="ds-label-default">Full name</Label>
+      <Input id="ds-label-default" placeholder="Jordan Rivers" />
+    </div>
+  );
+}
+
+/** Same paired pattern, with an inline required marker — a common real usage on this form control. */
+export function Required() {
+  return (
+    <div className="w-72 space-y-2">
+      <Label htmlFor="ds-label-required">
+        Date of birth <span className="text-destructive">*</span>
+      </Label>
+      <Input id="ds-label-required" placeholder="MM/DD/YYYY" />
+    </div>
+  );
+}
