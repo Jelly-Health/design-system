@@ -399,3 +399,95 @@ body and names the source as the authority, same contract as `MemberField.md`.
 - The borrowed-dependency recipe held unchanged: one symlink set from `wt-design-sync`'s install
   plus `esbuild`/`@esbuild` from `web-app`. `playwright@1.62.0` into `.ds-sync` with
   `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` launched the cached `chromium-1234` with no download.
+
+## The 2026-09-02 re-sync — 31 → 36 components (JH219's screen shells + JH227's colour fix, JH230 already anchored)
+
+Ran from a fresh worktree cut from `origin/main` at `fb5b825` (29 commits behind the primary
+checkout's stale `main`, fast-forwarded first). Picked up everything merged since the JH218 resync
+(`ds-resync-jh218`, PR #27): `card-226`/`card-228` were already anchored in `_ds_sync.json`;
+`card-221-dark-mode-signoff` and `card-229-verifier-baselines` touched no rendered components;
+`card-230-inherited-text-colour` changed `Checkbox`/`Label`/`RadioGroup`/`Select`/`Switch`'s text
+colour (no new component); `card-227-dialog-close-guard` changed `Dialog` behaviourally (no visual
+diff — confirmed on the canary spot-check) and added three new member/index.ts exports
+(`dialogCloseGuard`, `DialogCloseGuard`, `DialogContentProps`) that the content scan correctly
+skipped (camelCase / `*Props` suffix, same pattern as `memberStateFrom`). The real new surface was
+JH219's three screen shells, landed via `card-222-member-plane-primitives` (PR #25) and
+`card-219-member-screen-chrome` (PR #26), never synced until now.
+
+### 🔴 A freshly-generated `.pnp.cjs` silently switches esbuild into PnP resolution and breaks the borrowed-node_modules recipe
+
+Ran a bare `corepack yarn install` at the start of this run (per the base skill's "try a real
+install first" guidance) to see if the package was more self-contained than NOTES predicted. It
+resolved instantly (Yarn 4.5.0, PnP) but produced **no `node_modules`** — this package's
+`packageManager` pin is Yarn Berry in PnP mode, and `react`/`react-dom` are peerDeps yarn won't
+install anyway. So the borrowed-symlink recipe was still needed — but the install had ALSO written
+`.pnp.cjs`/`.pnp.loader.mjs` into the worktree root, and esbuild silently detects that file and
+switches to Yarn-PnP-aware resolution for the WHOLE build, even for unrelated symlinked
+`node_modules`. Every bundle attempt failed on `Could not resolve "react"` /
+`"react-dom"` with an error citing `Jelly-Health/website`'s (unrelated) real path and quoting
+`.pnp.cjs`'s `packageDependencies` list — a confusing error because `website` itself has no PnP
+manifest; `.pnp.cjs` was this worktree's own, one directory up from where the error seemed to point.
+**Fix: delete `.pnp.cjs`/`.pnp.loader.mjs` after any `yarn install` attempt in this package** (they
+are untracked, not gitignored — `git status --short .pnp.cjs` shows them as `??`) before running the
+converter. **Do not commit them.** The real fix — a proper lockfile + `node-modules` linker — is
+still the standing recommendation; until then, do not run a bare `yarn install` here without
+cleaning up its PnP artifacts before the next build.
+
+### The eleven `Portal*` sub-parts and `TaskDone`/`OnboardingScreen` needed the same two fixes MemberField needed, for the same reason
+
+Discovery found 17 new top-level "components" from `src/components/member/{portal,onboarding,task-screen}.tsx`
+(`member/index.ts`'s own doc comment calls this "the three screen shells... and the thirteen
+`Portal*` parts" — that wording is the tell). Two fixes, matching the established patterns:
+
+- **12 of the 13 `Portal*` exports are compound sub-parts of `PortalShell`**, not their own cards —
+  pruned via `componentSrcMap: {Name: null}` (`PortalBack`, `PortalBody`, `PortalConversation`,
+  `PortalConversationFooter`, `PortalConversationHeader`, `PortalDestination`, `PortalIdentity`,
+  `PortalMessageBar`, `PortalNav`, `PortalPane`, `PortalPaneBody`, `PortalPaneTitle`) — exactly the
+  Dialog/Card pattern. `.design-sync/previews/PortalShell.tsx` composes all 12 inside 4 stories
+  (`PhoneConversation`, `PhoneList`, `PhonePane`, `ThreePanes`); none renders standalone.
+- **`OnboardingScreen`, `OnboardingStep`, `PortalShell`, `TaskDone` fell to `general`** — the
+  fuzzy-find looks for `onboarding-screen.tsx`/`onboarding-step.tsx`/`portal-shell.tsx`/`task-done.tsx`
+  and the real files are `onboarding.tsx`/`portal.tsx`/`task-screen.tsx`. Fixed with four **stub**
+  `docsMap` entries (`---\ncategory: member\n---`, no body) — same as `MemberField`'s fix, and
+  confirmed the stub-doesn't-override-synthesis mechanism by reading `lib/emit.mjs:412`
+  (`if (c.docBody)` is a truthy check, so an empty-body doc file falls through to JSDoc synthesis,
+  which is rich here). `TaskScreen` alone matched (`task-screen.tsx` is its own kebab file) and
+  needed no fix.
+- **`OnboardingScreen` still rendered blank (`RENDER_BLANK`, PNG 4630B, `maxHeight: 48`) after the
+  docsMap fix** — it only ever renders meaningfully wrapping an `OnboardingStep` child (same as
+  `PortalShell` needing its 12 parts), and had no dedicated preview. Authored
+  `.design-sync/previews/OnboardingScreen.tsx` (one story, reusing `OnboardingStep.tsx`'s `Step`
+  composition) rather than pruning it — `member/index.ts`'s own doc comment lists it as one of "the
+  three screen shells", i.e. explicitly meant to be a real export, not a sub-part.
+- **`TaskDone` needed neither a prune nor a docsMap fix nor an authored preview** — it rendered real
+  content (10434B, "Booked / Back to jellyhealth") with no dedicated `.tsx` of its own. Its only
+  demonstration is the `Done` story inside `TaskScreen.tsx`'s preview file; `TaskDone` itself ships
+  the mechanical floor-card render (crash-prevention props from its `.d.ts`), which happened to
+  produce legible output because its props (`title`, `backHref`, `onExit`) are all simple strings/fns.
+  Not authored a dedicated preview for it — the floor card here is good enough, and duplicating the
+  `Done` composition into its own file would just be two copies of the same story to keep in sync.
+- **Three new `[GRID_OVERFLOW] wide` warns** — `OnboardingStep`, `PortalShell`, `TaskScreen` — same
+  remedy as every prior wave: `cardMode: "column"`.
+
+### `conventions.md` — validated (30/30 classes, 35/35 names/helpers), one paragraph added
+
+Same validation method as JH218: grepped every named class against `_ds_bundle.css` and confirmed
+every named component/helper against a live `window.JellyDS` via a headless Playwright page (not
+`grep`ping the bundle text, which gives false negatives per the standing warning above) — 129 live
+exports, all 35 checked names present, nothing drifted. Added one paragraph for the three screen
+shells (naming all four exports plus the 8 addressable `Portal*` sub-parts and pointing at
+`PortalShell.prompt.md` for the `view` prop) — the file predated JH219 the same way it predated the
+four-state pattern before JH218's paragraph.
+
+### Everything else
+
+- `tsc` via `node node_modules/typescript/bin/tsc`: not re-run this pass (no source changes in
+  scope touch type-only surfaces beyond what JH218 already baselined at 2 pre-existing errors);
+  worth re-checking on the next run that touches `.tsx` prop types.
+- Canary spot-checks across 3 driver runs (15 total picks, several repeats): `Dialog`, `Wordmark`,
+  `Table`, `Badge`, `Button`, `Tabs`, `Accordion`, `ThreadSkeleton`, `MemberEmpty`, `MemberError`,
+  `MessageBubble`, `ScreenSkeleton`, `ScrollArea` — all confirmed visually against their recorded
+  grades, zero divergence. No `--force` re-grade needed.
+- Final `package-validate.mjs`: 36/36 render clean, 0 bad, 0 thin, 0 variants-identical. One
+  standing non-blocking warn (`[GRID_OVERFLOW] escape` on `Toast`) — same false positive JH225
+  triaged, re-confirmed rather than re-explained.

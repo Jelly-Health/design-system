@@ -31,6 +31,18 @@
     "MessageSender": null,
     "PopoverContent": null,
     "PopoverTrigger": null,
+    "PortalBack": null,
+    "PortalBody": null,
+    "PortalConversation": null,
+    "PortalConversationFooter": null,
+    "PortalConversationHeader": null,
+    "PortalDestination": null,
+    "PortalIdentity": null,
+    "PortalMessageBar": null,
+    "PortalNav": null,
+    "PortalPane": null,
+    "PortalPaneBody": null,
+    "PortalPaneTitle": null,
     "RadioGroupItem": null,
     "ScrollBar": null,
     "SelectContent": null,
@@ -82,6 +94,9 @@
     "MessageBubble": {
       "cardMode": "column"
     },
+    "OnboardingStep": {
+      "cardMode": "column"
+    },
     "PendingValue": {
       "cardMode": "column"
     },
@@ -89,9 +104,15 @@
       "cardMode": "single",
       "viewport": "320x200"
     },
+    "PortalShell": {
+      "cardMode": "column"
+    },
     "Select": {
       "cardMode": "single",
       "viewport": "320x280"
+    },
+    "TaskScreen": {
+      "cardMode": "column"
     },
     "Thread": {
       "cardMode": "column"
@@ -113,7 +134,11 @@
     "MemberError": ".design-sync/docs/MemberError.md",
     "MemberField": ".design-sync/docs/MemberField.md",
     "MemberStateView": ".design-sync/docs/MemberStateView.md",
+    "OnboardingScreen": ".design-sync/docs/OnboardingScreen.md",
+    "OnboardingStep": ".design-sync/docs/OnboardingStep.md",
+    "PortalShell": ".design-sync/docs/PortalShell.md",
     "ScreenSkeleton": ".design-sync/docs/ScreenSkeleton.md",
+    "TaskDone": ".design-sync/docs/TaskDone.md",
     "ThreadSkeleton": ".design-sync/docs/ThreadSkeleton.md"
   },
   "extraEntries": [
