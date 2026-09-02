@@ -32,29 +32,50 @@
  * enumerates the files on disk, derives the subpath a consumer would write for each, and makes a
  * real consumer import it.
  *
- * `ERR_UNKNOWN_FILE_EXTENSION` counts as SUCCESS: it means node found the file and merely cannot
- * execute TypeScript, which every real consumer compiles. `ERR_MODULE_NOT_FOUND` is the defect.
+ * ── Why it resolves rather than imports ──────────────────────────────────────────────────────
+ * The first version `import()`ed each subpath and read `ERR_UNKNOWN_FILE_EXTENSION` as success
+ * (node found the file, it just cannot execute TypeScript) and `ERR_MODULE_NOT_FOUND` as the
+ * defect. That passed locally on node 20 and FAILED IN CI on every `.ts` subpath, for a reason
+ * that has nothing to do with the exports map: newer node strips types from `.ts` and actually
+ * RUNS it, so `use-toast.ts` reached its own `import 'react'`, found no `node_modules` on the
+ * runner, and threw `ERR_MODULE_NOT_FOUND` — the same code, about a different module. The check
+ * was reading a transitive dependency's absence as its own subject's absence, and it was
+ * node-version-dependent, which is the worst kind of guard: green on the machine that wrote it.
+ *
+ * So it resolves and then stats, instead. `import.meta.resolve` applies the real exports map and
+ * returns a URL WITHOUT loading anything — deliberately including URLs for files that do not
+ * exist, which is exactly the defect here — so pairing it with `existsSync` asks the precise
+ * question and nothing else. No execution, no dependencies, no node-version sensitivity.
  *
  * ── Mutation-tested ───────────────────────────────────────────────────────────────────────────
- * Each applied alone to an otherwise-passing tree. Baseline: 33 of 33 subpaths resolve, rc=0.
+ * Each applied alone to an otherwise-passing tree. Baseline: 35 of 35 subpaths resolve, rc=0.
  *
- *   - remove the `./ui/use-toast` exact entry     -> 1 broken, 32/33
- *   - remove the `./ui/index` exact entry         -> 1 broken, 32/33
- *   - remove the `./member/index` exact entry     -> 1 broken, 32/33
+ *   - remove the `./ui/use-toast` exact entry     -> 1 broken, 34/35
+ *   - remove the `./ui/index` exact entry         -> 1 broken, 34/35
+ *   - remove the `./member/index` exact entry     -> 1 broken, 34/35
  *   - replace all three exact entries with the array-arm form
- *       -> 3 broken, 30/33. This is the run that DISPROVED the array fix; the claim above is that
+ *       -> 3 broken, 32/35. This is the run that DISPROVED the array fix; the claim above is that
  *          measurement, not a reading of the spec
- *   - point `./ui/*` at `*.ts` instead of `*.tsx` -> 21 broken, 12/33 (every component)
+ *   - point `./ui/*` at `*.ts` instead of `*.tsx` -> 21 broken, 14/35 (every component)
+ *   - break the root `"."` target                 -> 1 broken, 34/35
  *   - give a wildcard an object target            -> rejected outright, before probing anything
  *
- * ⚠️ This script had the same disease it was written to cure, and a mutation is what found it.
- * The wildcard scan began as `.filter(([key, target]) => typeof target === 'string')`, so the
- * moment the array-arm mutation turned the wildcards into arrays it stopped enumerating those two
- * directories ENTIRELY and reported "0 broken" — a clean pass over almost nothing, on a tree where
- * three subpaths were dead. It now handles both shapes and rejects any third one rather than
- * skipping it, which is what the last mutation above exists to prove.
+ * ⚠️ This script had the same disease it was written to cure, twice, and a mutation found the
+ * first while CI found the second.
  *
- * Negative control: the unmodified tree -> 33 of 33, rc=0.
+ *   1. The wildcard scan began as `.filter(([key, target]) => typeof target === 'string')`, so the
+ *      moment the array-arm mutation turned the wildcards into arrays it stopped enumerating those
+ *      directories ENTIRELY and reported "0 broken" — a clean pass over almost nothing, on a tree
+ *      where three subpaths were dead. It now handles both shapes and rejects any third rather
+ *      than skipping it, which is what the last mutation above exists to prove.
+ *   2. It was green locally and RED IN CI on every `.ts` subpath, for a reason unrelated to the
+ *      exports map — see "Why it resolves rather than imports" above. Reproduced deliberately
+ *      before fixing: `git archive HEAD` into a clean tree with no `node_modules`, symlinked into
+ *      a consumer, run under node 22 with `--experimental-strip-types`, which is the runner's
+ *      behaviour. The old classifier calls `ui/use-toast` MISSING there and `ui/button` fine. The
+ *      current one passes on that same clean tree under both node 20 and node 22.
+ *
+ * Negative control: the unmodified tree -> 35 of 35, rc=0.
  */
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, readdirSync, symlinkSync, writeFileSync, rmSync } from 'node:fs'
@@ -116,15 +137,15 @@ try {
   symlinkSync(ROOT, join(consumer, 'node_modules', NAME))
   writeFileSync(
     join(consumer, 'probe.mjs'),
-    `const targets = ${JSON.stringify(unique)}
+    `import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+const targets = ${JSON.stringify(unique)}
 const out = []
 for (const t of targets) {
-  try { await import(t); out.push([t, 'ok']) }
-  catch (e) {
-    out.push([t, e.code === 'ERR_UNKNOWN_FILE_EXTENSION' ? 'ok'
-      : e.code === 'ERR_MODULE_NOT_FOUND' ? 'missing'
-      : e.code === 'ERR_UNSUPPORTED_DIR_IMPORT' ? 'missing' : 'ok'])
-  }
+  let url
+  try { url = import.meta.resolve(t) }
+  catch (e) { out.push([t, 'unexported:' + e.code]); continue }
+  out.push([t, existsSync(fileURLToPath(url)) ? 'ok' : 'missing:' + url.split('/').pop()])
 }
 console.log(JSON.stringify(out))`,
   )
