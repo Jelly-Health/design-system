@@ -963,13 +963,23 @@ re-pins — a JH217-shaped follow-up, not this card.
 
 ### The dark-mode sign-off
 
-**Signed off 2026-09-02 by Gian Riyanto (JH221), against `b264d78`.** Every member surface was
-rendered in both themes at 360px and 900px and looked at. The verdict is **pass with three
-findings**, one of them blocking a claim this README would otherwise make.
+**Signed off 2026-09-02 by Gian Riyanto (JH221).** Every member surface was rendered in both themes
+at 360px and 900px and looked at. The verdict is **pass with three findings**, one of them blocking a
+claim this README would otherwise make.
+
+Inspected against `b264d78` and **re-verified against `1fdf309`**, because JH218's re-sync
+([#27](https://github.com/Jelly-Health/design-system/pull/27)) and JH229
+([#28](https://github.com/Jelly-Health/design-system/pull/28)) both merged between the inspection and
+this section landing. That is not bookkeeping: #27 changed `ThreadSkeleton`, one of the surfaces
+signed off here, so the first pass had looked at a version that no longer existed. Re-inspected — the
+skeleton now draws bubble *shapes* with real width rather than the width-less stubs that shipped
+with JH218, and it reads as a conversation loading in both themes. **A sign-off names the commit it
+was made against, or it is a sign-off on nothing in particular.**
 
 The arithmetic was never what was missing. `verify-contrast.py` computes 152 pairs, and
-`verify-member-states.mjs` and `verify-member-chrome.mjs` assert 122 more cases between them — and
-**not one of the three took a picture.** So:
+`verify-member-states.mjs` and `verify-member-chrome.mjs` assert **126** more cases between them
+(50 + 76 on `1fdf309`; it was 122 when this section was written, and #27 added four) — and **not one
+of the three took a picture.** So:
 
 ```
 node scripts/contact-sheet-member.mjs
