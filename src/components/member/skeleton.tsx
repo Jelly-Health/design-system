@@ -81,9 +81,19 @@ function BubbleSkeleton({
   side: 'start' | 'end'
   widths: readonly string[]
 }) {
+  /* 🔴 The BUBBLE carries the width, not the spacers inside it. A bubble is `self-start`/`self-end`
+   * in a flex column, so it is shrink-to-fit: a percentage on a CHILD resolves against a containing
+   * block whose own width depends on that child, which CSS resolves as `auto` during intrinsic
+   * sizing. Every spacer therefore computed to 0 and every bubble to its 32px of padding —
+   * measured in headless Chromium 2026-09-02 against a 420px Thread, all six of 62/43/38/71/56/29%
+   * flat zero. The skeleton rendered as three narrow pills and nothing caught it: the fill-contrast
+   * and markup checks all pass on a 32px stub. A real bubble is sized by its WIDEST line, so that
+   * is what sizes this one; `verify-member-states.mjs` part C now measures it. */
+  const widest = widths.reduce((a, b) => (parseFloat(b) > parseFloat(a) ? b : a))
   return (
     <div
       data-slot="skeleton-block"
+      style={{ width: widest }}
       className={cn(
         'bg-line flex max-w-[88%] animate-pulse flex-col gap-[var(--space-1)] rounded-[var(--radius-bubble)] px-4 py-3',
         side === 'end' ? 'self-end' : 'self-start',
@@ -95,10 +105,7 @@ function BubbleSkeleton({
       {widths.map((width, i) => (
         <div
           key={`${width}-${i}`}
-          style={{
-            width,
-            height: 'calc(var(--text-member-body) * var(--leading-relaxed))',
-          }}
+          style={{ height: 'calc(var(--text-member-body) * var(--leading-relaxed))' }}
         />
       ))}
     </div>
