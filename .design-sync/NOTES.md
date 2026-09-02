@@ -45,7 +45,9 @@
 - **`@types/react` and the CSS-compile deps live in a gitignored `node_modules/`** at the package
   root, populated this run from `Jelly-Health/website`'s install via symlinks/copies. Not reproducible
   from a bare clone without redoing that step — a real `yarn install` of this package (once it has a
-  lockfile) would make this unnecessary.
+  lockfile) would make this unnecessary. **Superseded for the 2026-09-02 run — see the
+  `--node-modules` bullet above: the whole set came from the `wt-design-sync` worktree's install,
+  not from `website`, via one symlink.**
 - **The `@source` glob in `compile-src.css` scans BOTH `src/components/**` and
   `.design-sync/previews/**`** — this was widened mid-run after two independent subagents (batches C
   and D) hit the same defect from the narrower scan: a Tailwind utility class used only in a preview
@@ -163,9 +165,39 @@ Otherwise clean — final `package-validate.mjs` run: 24/24 render, 0 bad, 0 thi
 variants-identical, 0 grid overflow.
 
 
-## Coverage — closed 2026-09-02
+## Coverage — the member plane, closed 2026-09-02
 
-The first run synced the 19 shadcn primitives + `Wordmark` (20). The **2026-09-02 re-sync** added
-JH212's four member compositions — `MessageBubble`, `Thread`, `PendingValue`, `MemberField` — for
-**24 components**, which is everything exported from `src/components/` today. The prediction above
-that "no config change is needed" turned out to be wrong in two ways; both are recorded below.
+The first run synced the 19 shadcn primitives + `Wordmark` (20). The **2026-09-02 member re-sync**
+added JH212's four member compositions for **24 components** — everything exported from
+`src/components/` today.
+
+| Component | Landed | Preview |
+|---|---|---|
+| `MessageBubble` | `8e9f33e` (PR #13, JH212) | authored, graded good |
+| `PendingValue` | `8e9f33e` (PR #13, JH212) | authored, graded good |
+| `Thread` | `8e9f33e` (PR #13, JH212) | authored, graded good |
+| `MemberField` | `03f0847` (PR #16, JH212) | authored, graded good |
+
+⚠️ Kept from JH225's correction, because it will bite anyone reading older notes: **the export is
+`PendingValue`, not `PendingClinicalValue`** (`src/components/member/index.ts`) — the longer name is
+the concept, not the symbol, and a re-sync looking for it finds nothing.
+
+JH225 predicted `componentSrcMap` would need new prune entries for the sub-parts the content scan
+surfaces as top-level components. It did, and they are in `config.json`: `MessageSender`,
+`MessageGroup` (from `message-bubble.tsx`), `ThreadDay`, `ThreadEvent` (from `thread.tsx`). It also
+predicted `cfg.pkg` alone would suffice to FIND them, which held for three of the four —
+`MemberField` needed the `docsMap` route below, and the obvious fix for it is a live trap.
+
+### The deployed staleness JH225 measured is now resolved
+
+JH225 read the live project back and found the pushed `_ds_bundle.css` stale by three cards. Verified
+against the bundle this re-sync uploaded, so these are closed rather than merely expected to be:
+
+- **Font weights bound.** `--font-weight-medium: 500` / `--font-weight-semibold: 600` are gone;
+  `--weight-medium: 510` and `--weight-semibold: 590` are present, and `.font-medium` /
+  `.font-semibold` resolve to them. That is JH225 (`ef6dea7`) actually reaching the design agent.
+- **The member type ramp is complete** — all five of `caption`/`body`/`lede`/`title`/`section`, not
+  just `body`. Note that four of them are present ONLY because the vocabulary probe was widened this
+  run; see the probe section below. Being declared in `tokens.css` was never enough.
+- **20 components → 24**, the member plane no longer empty.
+- Still compiled with Tailwind **4.3.3** — keep matching it (see `build-css.mjs`).

@@ -16,11 +16,33 @@
  * not just whatever's incidentally used today.
  *
  * MUST be run with cwd at the design-system package root (paths below are cwd-relative, not
- * relative to this script's own location -- that indirection produced a silently truncated
- * ~55KB compile in testing, vs. the correct ~113KB, for reasons not fully root-caused; cwd-relative
- * paths sidestep it entirely). Requires @tailwindcss/postcss + tw-animate-css resolvable from
- * <repo-root>/node_modules -- see NOTES.md for how this run sourced them (symlinked from
- * Jelly-Health/website's install; this package itself has no lockfile yet).
+ * relative to this script's own location -- that indirection produced a silently smaller, LESS
+ * scoped compile in testing, for reasons not fully root-caused; cwd-relative paths sidestep it
+ * entirely).
+ *
+ * ⚠️ The "correct ~113KB" this comment used to quote as the reference point IS NOT REPRODUCIBLE and
+ * should not be chased. Measured 2026-09-02 (JH225): a correct run here produces **58,366 bytes**,
+ * and the bundle the last sync actually PUSHED -- read back from the live Claude Design project's
+ * `_ds_bundle.css` -- is **53,927 bytes**. Both real figures are ~54-58KB, so a ~55KB result is the
+ * normal case and not the truncation signature this comment implied. The cwd rule above still
+ * stands; only the number was wrong. A wrong reference point is worse than none, because it makes a
+ * correct compile look broken.
+ *
+ * And that is why no number here is a target: the member re-sync on the SAME day moved it twice for
+ * entirely legitimate reasons -- **58,637** once four authored previews entered the `@source` scan,
+ * then **59,017** once vocabulary-probe.tsx was widened to the member type ramp. The output tracks
+ * the vocabulary in scope, so it MUST move whenever previews or the probe change. Compare against
+ * the previous run on this tree, never against a number in a comment.
+ *
+ * Requires @tailwindcss/postcss + tw-animate-css resolvable from <repo-root>/node_modules -- see
+ * NOTES.md for how this run sourced them (symlinked from Jelly-Health/website's install; this
+ * package itself has no lockfile yet).
+ *
+ * ⚠️ Source those from `Jelly-Health/website`, NOT `web-app`. The VERSION matters and neither repo
+ * pins the other: website has Tailwind 4.3.3 (what the last sync compiled with), web-app has
+ * 4.1.18. Borrowing from web-app silently DOWNGRADES the bundle two minor versions and rewrites
+ * output that has nothing to do with your change -- measured 2026-09-02, a 4.1.18 compile of the
+ * same tree came out 60,558 bytes against 4.3.3's 58,366.
  *
  *     cd <design-system repo root>
  *     node .design-sync/scripts/build-css.mjs
