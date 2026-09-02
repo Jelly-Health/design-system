@@ -14,7 +14,10 @@
   ],
   "exports": {
     ".": "./src/index.ts",
+    "./ui/use-toast": "./src/components/ui/use-toast.ts",
+    "./ui/index": "./src/components/ui/index.ts",
     "./ui/*": "./src/components/ui/*.tsx",
+    "./member/index": "./src/components/member/index.ts",
     "./member/*": "./src/components/member/*.tsx",
     "./styles": "./src/styles/index.css",
     "./tokens.css": "./src/styles/tokens.css",
