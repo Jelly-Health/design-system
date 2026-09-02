@@ -14,7 +14,11 @@ four rules that are easy to break unmissable.
    consumer already wrote, with no error and nothing to review — it shipped once and put the
    marketing site below our own member body floor. Removing an `@theme inline` alias is **not** enough:
    a plain `:root` declaration overrides Tailwind by cascade anyway, so the name itself must stay
-   prefixed. `scripts/verify-type-ramp.py` enforces this; run it before you commit a token change.
+   prefixed. Member and marketing surfaces have their own ramp, `--text-member-*`, and **only its
+   two display steps may be fluid** — a `clamp()` below 24px can put its lower bound under the 16px
+   member body floor at narrow viewports, silently, and axe cannot see it because a small font is
+   not a WCAG failure. `scripts/verify-type-ramp.py` enforces all of this; run it before you commit
+   a token change.
 4. **`/design-sync` is typed by a human**, in this directory, at the Claude Code prompt. You cannot run
    it and should not try.
 

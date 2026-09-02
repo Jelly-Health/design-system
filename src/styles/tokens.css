@@ -135,7 +135,7 @@
   --text-console-sm: 12px;
   --text-console-base: 13px;  /* console primary */
   --text-console-md: 15px;
-  --text-console-lg: 16px;    /* MEMBER BODY FLOOR — the audience straddles presbyopia onset */
+  --text-console-lg: 16px;    /* same 16px as the member floor, but console leading. See below. */
   --text-console-xl: 20px;
   --text-console-2xl: 24px;
   --text-console-3xl: 32px;
@@ -143,16 +143,54 @@
   --text-console-5xl: 64px;
   --text-console-6xl: 72px;
 
+  /* ══ The member ramp ═══════════════════════════════════════════════════════════════════════════
+   * Five steps, ROLE-named rather than size-named, because every other member token in this file
+   * is — `--pad-member-screen`, `--gap-member-thread`, `--numeric-member`. A role name survives a
+   * retune; `--text-member-lg` at 20px becomes a lie the day the ramp moves. It also keeps
+   * `--text-member-body`'s existing name, so nothing in `v2` or the website has to migrate.
+   *
+   * These are NEW values. The canvases could not supply them and it is worth recording why, so
+   * nobody re-derives them from there: the member canvases are drawn below 1:1 (the Conversation
+   * Spine's three most common sizes are 11.5px ×53, 12.5px ×44, 11px ×27 — half-pixel sizes in
+   * that volume are a scaled artboard, not a decision), and `Portal.dc.html` already writes
+   * `var(--text-member-body)` rather than px. The marketing canvas has real values but is a
+   * drawing: 34 distinct sizes on one page, 16 of them separate `clamp()`s, two sharing endpoints
+   * and differing only in slope. Same situation as the 19 radii, and the same answer — chosen,
+   * with the canvas as evidence of range rather than as a list to port.
+   *
+   * Decided by Gian 2026-09-01 (JH214), delegating to the recommendation in the specimen sheet
+   * built for the call. Steps are fine through the reading range and jump at the display tier,
+   * because reading and display are two different jobs.
+   *
+   * ⚠ The ramp bottoms at 14px and there is deliberately NO member 12px. 14px is also Tailwind's
+   * stock `text-sm`, and the token still earns its name twice over: JH216 bans the generic name in
+   * consumers, so without it a caption has nothing legal to write; and the value here is our
+   * decision about the member minimum rather than Tailwind's about a default. It carries member
+   * leading, which `text-sm` would not.
+   */
+  --text-member-caption: 14px;  /* meta, timestamps, small print. The ramp's floor. */
+
   /* Holds 16px directly rather than aliasing a console step. It resolved to exactly this before
    * the rename (it pointed at the old `--text-lg`); pointing member body at a console token was
    * always the wrong semantics, and under the prefix it would read as one. */
-  --text-member-body: 16px;
+  --text-member-body: 16px;    /* MEMBER BODY FLOOR. Body copy, nav, CTA labels. */
 
-  /* The one fluid step. Ported verbatim from Jelly-Health/website, where it already ships and was
-   * itself carried over from v1 — not a new value. A marketing hero needs type that tracks the
-   * viewport; the console sits at a 1280px floor and never does, which is why the rest of this
-   * ramp is fixed and only this is not. A fuller display scale is unbuilt and needs a designer. */
-  --text-h1: clamp(2rem, 2.2vw + 1.35rem, 3.5rem);
+  --text-member-lede: 20px;    /* hero paragraph, section intro */
+  --text-member-title: 24px;   /* screen title, card title */
+
+  /* ══ The display tier — the only fluid steps in the system ════════════════════════════════════════
+   * Everything at or below 24px is FIXED, and that is an invariant rather than a preference: a
+   * clamp whose lower bound falls under 16px breaks the member body floor at narrow viewports,
+   * silently, on the surface where the floor matters most. Keeping the reading range fixed makes
+   * that unrepresentable instead of merely discouraged. verify-type-ramp.py checks 7 and 8 enforce
+   * both halves — no fluid reading step, and no display clamp with a minimum below the floor.
+   *
+   * The console never scales at all; it sits at a 1280px floor. Only these two do. */
+  --text-member-section: clamp(1.75rem, 1vw + 1.4rem, 2.25rem);   /* 28 → 36px — marketing <h2> */
+
+  /* Ported verbatim from Jelly-Health/website, where it already ships and was itself carried over
+   * from v1 — not a new value. A marketing hero needs type that tracks the viewport. */
+  --text-h1: clamp(2rem, 2.2vw + 1.35rem, 3.5rem);                /* 32 → 56px — one per page */
 
   /* Negative, scaled to size. Positive tracking survives on uppercase micro-labels only
    * (`--tracking-micro`) — uppercase always needs it, and that is the one place the rule inverts. */
@@ -474,7 +512,11 @@
   --text-console-4xl: var(--text-console-4xl);
   --text-console-5xl: var(--text-console-5xl);
   --text-console-6xl: var(--text-console-6xl);
+  --text-member-caption: var(--text-member-caption);
   --text-member-body: var(--text-member-body);
+  --text-member-lede: var(--text-member-lede);
+  --text-member-title: var(--text-member-title);
+  --text-member-section: var(--text-member-section);
   --text-h1: var(--text-h1);
 
   /* Line-height, mapped DELIBERATELY like radius above — not derived by ratio. Without this,
@@ -497,7 +539,18 @@
   --text-console-4xl--line-height: var(--leading-display);
   --text-console-5xl--line-height: var(--leading-display);
   --text-console-6xl--line-height: var(--leading-display);
+  /* Member leading is derived by a rule, not picked per step: through the READING range a member
+   * step sits ONE NOTCH LOOSER than the console step of the same size. 16px is normal on the
+   * console and relaxed here; 20px is snug there and normal here; 24px is tight there and snug
+   * here. "Member airy" is what the separate ramp is for, and this is the operative difference.
+   * The rule stops at the display tier: `section` takes tight, exactly as console-3xl does at the
+   * same size, because airiness is a reading property and display type wants the opposite.
+   * Decided 2026-09-01, JH214, extending JH215's size-driven mapping. */
+  --text-member-caption--line-height: var(--leading-relaxed);
   --text-member-body--line-height: var(--leading-relaxed);
+  --text-member-lede--line-height: var(--leading-normal);
+  --text-member-title--line-height: var(--leading-snug);
+  --text-member-section--line-height: var(--leading-tight);
   --text-h1--line-height: var(--leading-display);
 
   --shadow-float: var(--shadow-float);

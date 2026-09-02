@@ -97,13 +97,15 @@ their design", and connecting them to the designed vocabulary is a real design d
 - **The legacy `--jh-*` brand ramp is deprecated but still shipped.** 22 live call sites in `v2`
   (`brand-300` ×19, `brand-700` ×2, `brand-025` ×1). It is re-pointed onto roles so those sites stay
   on-palette; it should shrink to nothing as they are touched.
-- **There is no member/marketing type ramp.** The size scale is console density under
-  `--text-console-*`; on the member side there is exactly one type token, `--text-member-body`
-  (16px), plus `--text-h1` for a marketing hero. A member or marketing surface therefore has no
-  designed step for anything between those two and falls back to Tailwind's stock ramp, which is
-  Tailwind's decision and not ours. Naming those steps needs new values, so it is a designer task
-  (`/design-sync`) rather than something to fill in — see rule 1. Raised 2026-09-01 from JH211;
-  it is what currently blocks `Jelly-Health/website` from retyping its nav, CTAs and footer.
+- ~~**There is no member/marketing type ramp.**~~ **Fixed 2026-09-01 (JH214).** Five role-named
+  steps, `--text-member-caption` through `--text-member-section` — see § *Type*. What survives as
+  a gap is one tier out: **the nineteen primitives are still typed at console density.** Measured
+  on `main`, all 20 size utilities in `src/components/` are `text-console-*`, 18 of them
+  `text-console-sm` (12px), and none is a member token — so a member surface assembled from these
+  primitives starts a quarter below the floor even now that the ramp exists. The tokens are only
+  half the answer; the variant matrix that lets `Button`, `Label` and `Input` switch density is
+  [JH212](https://trello.com/c/mSYl9w68). The same applies to `--touch-min`: Button's tallest size
+  is `h-10` (40px) against a 44px floor, which is why `Jelly-Health/website` overrides both by hand.
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
 - ~~**No wordmark.**~~ **Fixed 2026-09-01 (JH200).** `<Wordmark />` ships from the package root —
@@ -188,14 +190,52 @@ footer going 14px → 12px and the hero paragraph 18px → 16px, which put the m
 surface we have a quarter below the **member body floor** `tokens.css` itself declares. axe passed
 the whole time, because a small font is not a WCAG failure — which is exactly why this is a
 committed check and not a note. `scripts/verify-type-ramp.py` fails the build if any generic name
-is bound again, and it is mutation-tested against all five ways of doing it.
+is bound again. It is mutation-tested, and the mutations — each one run, including two that
+defeated an earlier cut of the check — are listed in the script's own docstring rather than
+counted here, so the list cannot drift from the code.
 
-**Member surfaces must opt out explicitly.** Use `--text-member-body` (16px) for body copy and
-`--text-h1` for a marketing hero — the one fluid step in the system,
-`clamp(2rem, 2.2vw + 1.35rem, 3.5rem)`, since the console sits at a 1280px floor and never scales.
-Anything between those two steps is currently undesigned; see Known gaps.
+**Member surfaces must opt out explicitly**, and since JH214 there is a full ramp to opt into:
 
-Decided 2026-09-01, [JH138](https://trello.com/c/9BYx5GAH).
+```
+text-member-caption  14px       meta, timestamps, small print — the ramp's floor
+text-member-body     16px       body copy, nav, CTA labels — THE MEMBER BODY FLOOR
+text-member-lede     20px       hero paragraph, section intro
+text-member-title    24px       screen title, card title
+text-member-section  28 → 36px  marketing <h2>          fluid
+text-h1              32 → 56px  marketing hero, one per page   fluid
+```
+
+**Role-named, not size-named**, matching every other member token in the file
+(`--pad-member-screen`, `--gap-member-thread`, `--numeric-member`). A role name survives a retune;
+`--text-member-lg` at 20px becomes a lie the day the ramp moves.
+
+**The ramp bottoms at 14px. There is deliberately no member 12px.** 14px is also Tailwind's stock
+`text-sm`, and the token still earns its name twice: the package's ESLint rule bans the generic
+name in consumers, so without it a caption has nothing legal to write, and the value is our
+decision about a minimum rather than Tailwind's about a default.
+
+**Only the two display steps are fluid, and that is enforced.** Everything at or below 24px is
+fixed, because a `clamp()` whose lower bound falls under 16px breaks the member body floor at
+narrow viewports — silently, on the surface where the floor matters most, passing axe the whole
+time. `verify-type-ramp.py` check 7 rejects a fluid reading step and check 8 rejects a display
+clamp starting below the floor, including one re-declared later in the file.
+
+**Member leading is derived by a rule.** Through the reading range a member step sits **one notch
+looser** than the console step of the same size — 16px is `normal` on the console and `relaxed`
+here, 20px is `snug` there and `normal` here, 24px is `tight` there and `snug` here. "Member airy"
+is what the separate ramp is for, and this is the operative difference. The rule stops at the
+display tier, where `section` takes `tight` exactly as `console-3xl` does, because airiness is a
+reading property and display type wants the opposite.
+
+The values are new — the canvases could not supply them. The member canvases are drawn below 1:1
+(Conversation Spine's three commonest sizes are 11.5px ×53, 12.5px ×44, 11px ×27, and
+`Portal.dc.html` already writes `var(--text-member-body)` rather than px), and the marketing canvas
+is a drawing rather than a system: 34 distinct sizes on one page, 16 of them separate `clamp()`s,
+two sharing endpoints and differing only in slope. Same situation as the nineteen radii, same
+answer — chosen, with the canvas as evidence of range.
+
+Prefix decided 2026-09-01, [JH138](https://trello.com/c/9BYx5GAH); member ramp decided the same day,
+[JH214](https://trello.com/c/8UBPo5Py).
 
 ### Line-height is mapped, not derived
 
