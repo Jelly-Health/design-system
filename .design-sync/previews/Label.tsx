@@ -24,3 +24,15 @@ export function Required() {
     </div>
   );
 }
+/** The member plane (JH222) — 16px rather than the console 12px. Type only: a label forwards its
+ *  tap to the control, which honours `--touch-min` itself. */
+export function Member() {
+  return (
+    <div className="w-72 space-y-2">
+      <Label htmlFor="ds-label-member" plane="member">
+        Mobile number
+      </Label>
+      <Input id="ds-label-member" plane="member" placeholder="(555) 019-2847" />
+    </div>
+  );
+}

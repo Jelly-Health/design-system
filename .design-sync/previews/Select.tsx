@@ -46,3 +46,31 @@ export function Open() {
     </div>
   );
 }
+/**
+ * The member plane (JH222). `plane` goes on the TRIGGER and on each ITEM, not on `Select`: the
+ * content renders through a portal, so the list is not a DOM descendant of the trigger and cannot
+ * inherit it. A 44px trigger opening a list of 30px rows would have moved the floor violation
+ * rather than fixed it.
+ */
+export function Member() {
+  return (
+    <div className="w-72">
+      <Select>
+        <SelectTrigger plane="member" className="w-full">
+          <SelectValue placeholder="Choose a pharmacy" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="walgreens" plane="member">
+            Walgreens — Market St
+          </SelectItem>
+          <SelectItem value="cvs" plane="member">
+            CVS — 3rd &amp; Howard
+          </SelectItem>
+          <SelectItem value="mail" plane="member">
+            Mail order
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
