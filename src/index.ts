@@ -14,3 +14,9 @@ export * from "./components/ui";
  * carries no "use client" boundary concern, so it needs no `/brand/*` subpath the way `/ui/*`
  * does. See JH200 / src/components/brand/wordmark.tsx. */
 export * from "./components/brand/wordmark";
+
+/* The member-facing compositions (JH212). Product decisions rather than primitives -- see
+ * `./components/member/index.ts` for why they are a separate directory. None of them carries a
+ * "use client" boundary today, but they are exported on a `/member/*` subpath as well, so a
+ * consumer that only wants the thread does not pull the primitives in behind it. */
+export * from "./components/member";

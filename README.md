@@ -330,6 +330,61 @@ picks `text-accent-ink` (a page surface) or `text-accent-on-accent` (a filled on
 entirely (see the alias table above). Size is left to the consumer for the same reason a hero, a
 nav bar and a footer are not the same size.
 
+### The member compositions
+
+`src/components/member/` — JH212. Not primitives: a primitive is an atom with no opinion about the
+product, while everything here carries a decision the canvases settled and `tokens.css` records.
+Separate directory for the same reason `brand/` is one.
+
+```tsx
+import { Thread, ThreadDay, ThreadEvent } from "@jelly-health/design-system/member/thread";
+import { MessageBubble, MessageSender, MessageGroup } from "@jelly-health/design-system/member/message-bubble";
+import { PendingValue } from "@jelly-health/design-system/member/pending-value";
+
+<Thread>
+  <ThreadDay>12 Aug</ThreadDay>
+
+  <MessageGroup>
+    <MessageSender name="Alex"><Avatar className="size-5">…</Avatar></MessageSender>
+    <MessageBubble voice="provider">
+      Had a look at your panel this morning — nothing there worries me. <PendingValue />
+    </MessageBubble>
+    <MessageBubble voice="provider">I'd like to move you up. Nothing you need to do.</MessageBubble>
+  </MessageGroup>
+
+  <MessageBubble voice="member">ok — will I feel different?</MessageBubble>
+
+  <ThreadEvent action={<a href="/treatment">Your treatment</a>}>
+    Alex changed your dose to <PendingValue /> · 12 Aug
+  </ThreadEvent>
+</Thread>
+```
+
+Three rules are load-bearing and are explained at length in each file:
+
+1. **A human message is a bubble; a state change is a `ThreadEvent`.** A centred hairline row, past
+   tense, never a bubble and never an avatar. The v9 Conversation Spine canvas: *"The distinction is
+   structural rather than coloured, so neither kind dominates and neither reads as an alert."*
+   `voice="system"` is jellyhealth **speaking**, not jellyhealth reporting that something happened.
+2. **The two warm voices carry a `--line-strong` edge, and it is not decoration.** Measured against
+   `--sur` (the `Thread` surface): in light, provider sits **1.8 ΔL\*** and coordinator **0.8 ΔL\***
+   from it — both under the 3 ΔL\* threshold `tokens.css` sets for "a fill difference cannot delimit
+   this". The member bubble is 40+ ΔL\* in either theme and takes none.
+3. **`PendingValue` is the `___`**, on `--pending-rule` — a boundary, never a warning — and it
+   carries `sr-only` text, because three underscores read aloud are the "missing data" reading the
+   house rule forbids. Never use it for a price.
+
+⚠️ **Consumers must widen their Tailwind `@source` glob.** The v4 content scanner never reaches
+`node_modules`, so a consumer whose `@source` still points at `src/components/ui/**/*.tsx` silently
+drops every utility these components introduce — no error, dev or prod. Point it at
+`src/components/**/*.tsx` instead, which also picks up `brand/` (never covered) and anything added
+later.
+
+⚠️ **A member composition cannot assume a primitive is member-sized.** Measured 2026-09-02: all 20
+size utilities in `src/components/` are `text-console-*`, and `Button` stands at `h-10` (40px),
+below the 44px `--touch-min` floor. `ThreadEvent` therefore enforces the floor on the action slot it
+owns. Reconciling the primitives themselves is open — see *Known gaps*.
+
 ---
 
 ## The design loop
