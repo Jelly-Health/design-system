@@ -13,9 +13,16 @@ import { cn } from '../../lib/utils'
  * that actually ships (Inter) rather than the retired serif that class was written against.
  *
  * Colour is deliberately NOT baked in -- it inherits `currentColor`, so a consumer sets it via
- * the surface it sits on (`text-accent` on a page surface, `text-accent-foreground` reversed on
- * `bg-accent`). Baking in one token would make the reversed case -- a filled header, a dark
+ * the surface it sits on (`text-accent-ink` on a page surface, `text-accent-on-accent` reversed on
+ * `bg-accent-fill`). Baking in one token would make the reversed case -- a filled header, a dark
  * footer, a share-card background -- a second component instead of one colour override.
+ *
+ * ⚠️ Not `text-accent`/`bg-accent`/`text-accent-foreground` -- those are shadcn's own generic
+ * hover/selected-state aliases (`--accent` resolves to `--mut`, a near-white token, not a brand
+ * colour; `--accent-foreground` resolves to plain `--ink`). Using them renders this at
+ * near-invisible contrast on a light surface. Confirmed by screenshot during JH216's design-sync
+ * pass, 2026-09-01 -- `--accent-ink` is the token `tokens.css` itself documents as "the accent AS
+ * TEXT on a page surface", which is what this component actually needs.
  *
  * Size is deliberately NOT baked in either, for the same reason: a hero, a nav bar and a footer
  * are not the same size, and nothing here should presume which one a consumer is building.
