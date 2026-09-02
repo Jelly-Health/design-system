@@ -69,7 +69,7 @@ colour values.
 
 | | State |
 |---|---|
-| Colour | 25 roles, both themes. 150 contrast pairs recomputed from the values in this file: **0 failures**, 7 within 0.15 of their floor and marked `tight` |
+| Colour | 25 roles, both themes. **152 contrast pairs**, recomputed from the values in this file by `scripts/verify-contrast.py`: **0 failures**, 10 within 0.15 of their floor and marked `tight` at the declaration ([how](#contrast-is-computed-not-remembered)) |
 | Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590, 11-step size ramp **under `--text-console-*`** (see [Type: sizes are prefixed](#type-sizes-are-prefixed-and-that-is-the-point)), negative tracking scaled to size |
 | Spacing | 8px base, 9 steps plus named surface paddings and a 44px member touch floor |
 | Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px ceiling — plus one floating-layer shadow |
@@ -314,6 +314,42 @@ do not assume Next tree-shakes the unused ones away.
 carries it, except `@radix-ui/react-slot` — and adding one anyway silently converts every Server
 Component that imports the barrel into a client one. This bit `web-app/v2` and is recorded so it
 does not get "fixed" as tidiness later.
+
+### Contrast is computed, not remembered
+
+`scripts/verify-contrast.py` recomputes **every text-on-surface pair in this file, both themes**,
+from the hexes as they stand — no committed table, no remembered number. It is the fifth guard in
+`scripts/` and the only one that had a claim in this README before it had a check behind it.
+
+```
+python3 scripts/verify-contrast.py --table
+→ 152 pairs (76 per theme) · 10 tight · 0 failures
+```
+
+Five checks, in the order they are likely to catch something:
+
+1. **Every colour role is classified** — a surface, a foreground with a floor and a list of the
+   surfaces it can land on, or an exemption with a reason. A role nobody classified **fails**
+   rather than being skipped, which is what keeps the other four honest as the file grows.
+2. **Every pair clears its floor** — 4.5:1 for text, 3:1 for non-text boundaries and controls.
+3. **Every ratio quoted in a comment matches the computed value**, to 2dp. `tokens.css` says things
+   like `/* tight: 3.07 on --mut */` and `--ring on --accent-fill measures 1.77`; those are
+   assertions, and assertions go stale silently.
+4. **`tight` is enforced in both directions** — a pair within 0.15 of its floor must be marked at its
+   declaration, and a pair marked `tight` must really be one.
+5. The pair, tight and failure counts are printed, so this README can cite a command.
+
+**What running it the first time found.** The claim it replaces — *"150 pairs, 0 failures, 7 tight"* —
+holds on the part that matters: **0 failures**, and the two counts are close enough to be the same
+sweep. But **three tight pairs were unmarked**, and one of them is the tightest text pair in the
+system: `--accent-on-accent` on `--accent-fill` in dark measures **4.51 against a 4.5 floor**. The
+same value under a different name, `--voice-on-member`, is the member's own message bubble — so the
+member's own words in dark mode sit one hundredth above AA. It is passing, and it is one nudge to
+either hex from not passing. All three are now marked where they are declared.
+
+The pairing table lives in the script, written out rather than derived, because *"which surface can
+this text land on"* is a product fact that no amount of parsing recovers. **Disagreeing with a pair
+means editing that table** — which is the point of it being a table.
 
 ### The wordmark
 

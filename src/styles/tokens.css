@@ -10,9 +10,12 @@
  *   3. this one: the design pass's values (`jh-design-system-v10`) plus the type, spacing, shape
  *      and motion scales the package deliberately withheld until the design existed
  *
- * Contrast was recomputed independently from the values below rather than read from any committed
- * table: every foreground role against every surface it can land on, both themes. 0 failures.
- * Seven pairs sit within 0.15 of their floor and are marked `tight` where they appear.
+ * Contrast is recomputed from the values below rather than read from any committed table: every
+ * foreground role against every surface it can land on, both themes. `scripts/verify-contrast.py`
+ * is that computation — 152 pairs, 0 failures — and it also checks that every ratio quoted in a
+ * comment here is still true, so an edit to a hex cannot leave a stale number behind it. Ten pairs
+ * sit within 0.15 of their floor and are marked `tight` where they appear; three of those went
+ * unmarked until the script was written (JH208).
  *
  * ── Structure: three layers, and the reason for each ─────────────────────────────────────────
  *   :root          roles — real values. Overridden in `.dark`.
@@ -82,7 +85,7 @@
    * `--line-strong`: a pending clinical value is a BOUNDARY, not a warning. It must never read as
    * an error, and never as missing data. Reserved for clinical values — never a price.
    */
-  --pending-rule: #8A8577;
+  --pending-rule: #8A8577;     /* tight: 3.07 on --mut, 3.14 on --voice-provider — same value as --line-strong, so the same two pairs */
 
   /* ---- Voice: who is speaking. The product's central distinction. -----------------------------
    * A voice whose fill step against its surface is under 3 dL* takes `--line-strong` as its edge,
@@ -301,11 +304,11 @@
 
   --ink: #F7F8F8;
   --ink-2: #8A8F98;
-  --ink-3: #888C93;           /* tight: 4.54 on --mut. This is the floor — below it, it fails. */
+  --ink-3: #888C93;           /* tight: 4.54 on --mut, 4.62 on --success-surface. This is the floor — below it, it fails. */
 
   --accent-fill: #655FDD;     /* tight: 3.09 on --mut */
   --accent-ink: #B5AFFF;
-  --accent-on-accent: #F5F4F2;
+  --accent-on-accent: #F5F4F2;/* tight: 4.51 on --accent-fill — the tightest text pair in the system */
   --ring: #8A84FF;
   --ring-on-accent: #F5F4F2;
 
@@ -319,7 +322,7 @@
 
   --voice-provider: #251E19;  /* the physician stays warm in dark */
   --voice-coordinator: #1F1A16;
-  --voice-on-member: #F5F4F2;
+  --voice-on-member: #F5F4F2; /* tight: 4.51 on --accent-fill — same value, same pair: the member's own bubble */
 
   --secondary: #23252A;
 }
