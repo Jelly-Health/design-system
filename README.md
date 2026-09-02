@@ -74,7 +74,7 @@ colour values.
 | Spacing | 8px base, 9 steps plus named surface paddings and a 44px member touch floor |
 | Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px ceiling — plus one floating-layer shadow |
 | Motion | 100/120/200ms, one easing curve, focus-ring geometry |
-| Components | The 19 shadcn primitives (`accordion` through `tooltip`), extracted from `web-app/v2/components/ui/` by **JH207**. `src/index.ts` exports all of them; `./ui/*` subpath exports the same components individually |
+| Components | The 19 shadcn primitives (`accordion` through `tooltip`), extracted from `web-app/v2/components/ui/` by **JH207**, plus `toast` — the one primitive the canvases never drew until **JH202**/**JH224** — bringing the set to 20. `src/index.ts` exports all of them; `./ui/*` subpath exports the same components individually |
 
 **Still absent: the designed variant sheets.** The primitives carry their pre-design-pass geometry —
 `focus-visible:ring-[3px]` and `tw-animate-css` defaults, not the shipped `--ring-width`/`--ring-offset`
@@ -475,6 +475,67 @@ primitive it does not own. Hence `plane` on the primitives.
 <Button plane="member">Continue</Button>              {/* 44px, 16px label */}
 <Button plane="member" variant="ghost" size="icon" />  {/* 44×44 */}
 ```
+
+### The toast
+
+`src/components/ui/toast.tsx` (primitives, Radix-backed), `toaster.tsx` (the mounted viewport)
+and `use-toast.ts` (the imperative store) — JH224. Designed by JH202, which shipped no code on
+purpose; JH212 was going to build it and closed first without doing so, leaving a reserved
+elevation token (`tokens.css`: *"floating layers ONLY — popover, menu, command palette, dialog,
+toast, tooltip"*) with nothing behind it until now.
+
+**Two tiers, not a severity ramp — this is the point of the component, more than the visual
+design.** Carried verbatim from JH202: an informational toast is a *redundant acknowledgment* —
+the fact it announces must already be durably visible elsewhere (a queue row, a thread, a task
+list) before the toast fires — so it auto-dismisses. An error toast is different in kind: nothing
+else on screen changed, so the toast *is* the entire notice, and it must never expire unseen.
+
+```tsx
+toast({ tier: "info", description: "Note added to thread" })
+toast({ tier: "error", description: "Couldn't submit — check your connection", action: { label: "Try again", onClick: retry } })
+```
+
+| | Console | Member |
+|---|---|---|
+| Placement | bottom-right, stacking upward | top of viewport, safe-area aware |
+| Stacking | up to 3 visible, newest nearest the corner, 4th+ collapses to a "+N more" chip | max 1 — a second toast **replaces** the first |
+| Duration (informational) | 4s | 5s |
+| Size | `--text-console-base` (13px), 18px icon, 18px close target | `--text-member-body` (16px), 20px icon, `--touch-min` (44px) close target |
+
+`plane` lives on `<Toaster plane="…" />` (one per app), not on individual `toast()` calls —
+the same reason `size` on `Button` doesn't decide whether the surface is console or member.
+Elevation: `--radius-lg` (12px, the floating-layer ceiling), `--line-strong` boundary (never
+`--line`), `--shadow-float` — the system's rule that floating layers get a hairline *and* a
+shadow, static surfaces get only the hairline.
+
+**Never a finite duration for `tier="error"`.** `getToastDuration(tier, plane)` returns
+`Infinity` for every error toast, which is Radix's own signal (`@radix-ui/react-toast`'s
+`useTimer`) to never start the close timer — not a convention invented here. Pause-on-hover/focus
+is Radix's built-in `Toast.Root` behaviour and is not reimplemented. `scripts/verify-toast.mjs`
+proves this by mutation: flipping the `tier === "error"` branch to a finite number, or removing
+the wiring from `<Toast>` to `Toast.Root`'s `duration` prop, both fail it — run before this
+shipped, and reverted after confirming the failure.
+
+**Member "replaces, not stacks" is an actual removal, not a hidden queue.** A superseded member
+toast is dropped from the store outright (`planeVisibility`'s `superseded`, applied in
+`toaster.tsx`), rather than merely hidden — otherwise dismissing the visible toast would reveal
+the "replaced" one reappearing, which is exactly the stacking behaviour the rule exists to rule
+out. Console's overflow is the opposite: genuinely queued (`hiddenCount`), so a slot freed by a
+closing toast can surface the next one.
+
+**Dedup is opt-in, by a stable id — not inferred from message text.** JH202 left "two identical
+errors firing back to back" unresolved as out of its brief. Comparing message text to decide
+"identical" means guessing at what the caller meant; the caller already knows. Passing the same
+`id` twice updates the existing toast in place instead of adding a second one:
+
+```tsx
+toast({ id: "refill-submit-error", tier: "error", description: "Couldn't submit — check your connection" })
+```
+
+**Dialog's Escape-always-closes gap is not resolved here.** JH202 documented it and deferred the
+fix to whoever builds a dialog-hosted form; toast doesn't host one, so it isn't resolved by this
+card either. Raised as [JH227](https://trello.com/c/WLseboFW) rather than left silently open a
+second time.
 
 ### `cn()` knows this package's font sizes — and it did not before
 

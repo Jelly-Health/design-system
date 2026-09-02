@@ -4,7 +4,9 @@
  *
  * Two subjects, both of which are only checkable by rendering:
  *
- *   A. `Button`, `Input` and `Textarea` actually APPLY `plane="member"`. This is not a formality —
+ *   A. `Button`, `Input`, `Textarea` and, since JH224, `Toast` (via `ToastClose`/`ToastAction` —
+ *      `Toast` itself needs a mounted Radix viewport ref to render at all, see the case comments
+ *      below) actually APPLY `plane="member"`. This is not a formality —
  *      the first cut of `Button` declared the variant, typed it, and never destructured it, so
  *      `plane` fell into `...props`, leaked onto the DOM node, and was never passed to
  *      `buttonVariants`. `plane="member"` compiled, type-checked, reviewed clean and did nothing.
@@ -61,7 +63,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
  * is about the component's STRUCTURE, and `verify-class-merge.mjs` owns class resolution. */
 function load(relPath) {
   const src = readFileSync(join(ROOT, relPath), "utf8").replace(
-    /import \{ cn \} from '.*?'/,
+    /import \{ cn \} from ['"].*?['"]/,
     "const cn = (...a) => a.filter(Boolean).join(' ')",
   );
   const js = transformSync(src, { loader: "tsx", format: "cjs", jsx: "automatic" }).code;
@@ -78,6 +80,7 @@ const { MemberField } = load("src/components/member/field.tsx");
 const { Button } = load("src/components/ui/button.tsx");
 const { Input } = load("src/components/ui/input.tsx");
 const { Textarea } = load("src/components/ui/textarea.tsx");
+const { ToastClose, ToastAction, toastVariants } = load("src/components/ui/toast.tsx");
 
 const TOUCH = "min-h-[var(--touch-min)]";
 const planeCases = [
@@ -91,6 +94,17 @@ const planeCases = [
   ["Input default stays console", Input, {}, (h) => h.includes("text-console-base") && !h.includes("text-member-body")],
   ["Textarea plane=member reaches the body size", Textarea, { plane: "member" }, (h) => h.includes("text-member-body")],
   ["Textarea default stays console", Textarea, {}, (h) => h.includes("text-console-base") && !h.includes("text-member-body")],
+  // Toast (JH224) takes the same axis as the table in README § "Reaching for the right thing":
+  // two densities of one component, never a forked copy. `<Toast>` itself can't be rendered here
+  // -- Radix's `ToastImpl` returns null without a mounted `<Toast.Viewport>` ref, which
+  // `renderToStaticMarkup` never fires -- so this exercises the two pieces that render standalone
+  // (`ToastClose`, `ToastAction`); `scripts/verify-toast.mjs` covers `toastVariants` and the rest
+  // of the component directly, including the `duration` (never-auto-dismiss-on-error) rule.
+  ["ToastClose plane=member reaches the touch floor", ToastClose, { plane: "member" }, (h) => h.includes(TOUCH)],
+  ["ToastClose default stays console: no touch floor", ToastClose, {}, (h) => !h.includes(TOUCH)],
+  ["ToastClose plane does not leak to the DOM as an attribute", ToastClose, { plane: "member" }, (h) => !/ plane=/.test(h)],
+  ["ToastAction plane=member reaches the member caption size", ToastAction, { plane: "member", altText: "Retry" }, (h) => h.includes("text-member-caption")],
+  ["ToastAction default stays console", ToastAction, { altText: "Retry" }, (h) => h.includes("text-console-sm") && !h.includes("text-member-caption")],
 ];
 
 const html = (props) =>
