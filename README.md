@@ -282,8 +282,8 @@ compiling `tokens.css` with the real Tailwind 4.1.18 and reading `getComputedSty
 
 | utility | before | after |
 |---|---|---|
-| `font-light` | 300 | 300 (unchanged — the token equals Tailwind's stock value) |
-| `font-normal` | 400 | 400 (unchanged — same reason) |
+| `font-light` | 300 | 300 — unchanged, and *invisible to a value check* (see below) |
+| `font-normal` | 400 | 400 — same |
 | `font-medium` | **500** | **510** |
 | `font-semibold` | **600** | **590** |
 
@@ -299,6 +299,19 @@ own theme variables are named `--tracking-tight` and `--tracking-normal`, which 
 `tracking-*` utilities already carry our values. Its weight variables are `--font-weight-*` while
 ours are `--weight-*` — different names, no collision, no override, nothing reachable. The names
 are the whole difference, and neither case is visible in a diff.
+
+**Two of the four are invisible to a value check, and that needed a different kind of proof.**
+300 and 400 are also Tailwind's stock values for `font-light` and `font-normal`, so for those two
+bound and unbound compute the same number — deleting either binding is a real regression that a
+before/after comparison calls OK. `scripts/verify-weight-computed.mjs` proves the binding by
+**mutation** instead: each `--weight-*` is perturbed in memory to a sentinel that is deliberately
+not a multiple of 100, and the matching utility must follow it. A utility that does not move is
+reading Tailwind's scale whatever the file appears to say. All four bindings are proved live that
+way, and `font-bold` is asserted *not* to follow any of them.
+
+That script needs a browser, so like `verify-member-plane.mjs` and `verify-eslint-rule.mjs` it is
+run manually rather than in CI — the package has no lockfile. The structural guard is the one that
+gates the build:
 
 `scripts/verify-weight-scale.py` fails the build if a declared weight is not bound, if a binding
 points at a literal or the wrong token, or if a `--font-weight-*` is declared outside `@theme
