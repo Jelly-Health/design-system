@@ -46,6 +46,20 @@ jobs:
       - run: pip install fonttools brotli
       - run: python3 scripts/verify-fonts.py
 
+  exports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # No dependencies and no browser, for the same reason as the checks above:
+      # node is already on the runner, and this package has no lockfile to install
+      # from. It builds a throwaway consumer in a temp dir, symlinks the package
+      # into its node_modules and imports every public subpath, because the defect
+      # it catches -- a `.ts` file in a directory whose exports wildcard says
+      # `.tsx` -- is invisible everywhere else: the file exists, the barrel exports
+      # it, tsc is happy, and only a consumer sees `Cannot find module`. JH217
+      # found it once and it was still open when JH222 found two more of it.
+      - run: node scripts/verify-exports.mjs
+
   contrast:
     runs-on: ubuntu-latest
     steps:
