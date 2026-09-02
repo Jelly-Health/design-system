@@ -136,14 +136,25 @@ their design", and connecting them to the designed vocabulary is a real design d
   thing* and `checkbox.tsx`'s docstring for the full argument, including why the member plane also
   has to reserve its own footprint (without it, two radios in `RadioGroup`'s own `grid gap-3` have
   overlapping hit areas and the lower one silently wins taps meant for the upper).
-- 🔴 **Six primitives inherit their text colour and render black in dark.** `Button`
-  `outline`/`ghost`, `Label`, `Input`, `Textarea`, `PortalConversationHeader` and
-  `PortalConversationFooter` declare no resting `text-*`, and the package declares no base
-  `body { color }`, so they resolve to the browser default. **20.12:1 in light, 1.05:1 in dark.**
-  Found 2026-09-02 by JH221's sign-off, owned by [JH230](https://trello.com/c/QCQBL2Nj), guarded by
-  `scripts/verify-member-legibility.mjs` — which is **red on `main` on purpose** and goes green as
-  each fix lands. The fix is a real choice (a base layer, or six explicit classes) and JH230 makes
-  it. See § *The dark-mode sign-off*.
+- ~~**Six primitives inherit their text colour and render black in dark.**~~ **Fixed 2026-09-02
+  ([JH230](https://trello.com/c/QCQBL2Nj)).** `Button` `outline`/`ghost`, `Label`, `Input`,
+  `Textarea`, `PortalConversationHeader` and `PortalConversationFooter` declared no resting
+  `text-*` and the package declares no base `body { color }`, so they resolved to the browser
+  default — 20.12:1 in light, **1.05:1 in dark**. Each now names its own colour; the guard,
+  `scripts/verify-member-legibility.mjs`, is green with an empty register.
+
+  ⚠️ **JH221 reported this as live and it was not** — both consumers already set
+  `body { @apply bg-background text-foreground }` (`web-app/v2/app/globals.css`,
+  `Jelly-Health/website/app/globals.css`, measured on their `origin/main` 2026-09-02), so no
+  shipped app rendered black. The real defect was the **contract**: the package could not render
+  its own components legibly on its own, and every harness in `scripts/` proved it by rendering
+  them black. **The severity was overstated from a stale working tree rather than from
+  `origin/main`** — the repo's own standing rule, and it was not followed.
+
+  That correction is also what chose the fix. A base layer in `src/styles/index.css` — the obvious
+  move, and what shadcn ships — **cannot reach `v2` at all**, because v2 imports
+  `@jelly-health/design-system/tokens.css`, not `/styles`. Six explicit classes travel with the
+  components whichever entry point a consumer imports.
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
 - ~~**No wordmark.**~~ **Fixed 2026-09-01 (JH200).** `<Wordmark />` ships from the package root —
@@ -1003,11 +1014,21 @@ quietly leave it uninspected.
   `--sur`, `--mut-soft` and the onboarding card — never on the member fill.
 - **The portal container query** at both widths, in both themes.
 
-#### 🔴 What failed — [JH230](https://trello.com/c/QCQBL2Nj)
+#### 🔴 What failed — [JH230](https://trello.com/c/QCQBL2Nj), **fixed 2026-09-02**
 
-**Six components declare no resting text colour**, and the package declares no base
-`body { color }` either, so their text resolves to the browser default: **black**. In light that is
+**Six components declared no resting text colour**, and the package declares no base
+`body { color }` either, so their text resolved to the browser default: **black**. In light that is
 invisible — black on `--bg` measures **20.12:1** and looks deliberate. In dark it is **1.05:1**.
+
+⚠️ **Corrected 2026-09-02, and the correction is the more useful half.** This was first written as
+a live defect. It was not: both consumers already set `body { @apply bg-background text-foreground }`
+(`web-app/v2/app/globals.css` and `Jelly-Health/website/app/globals.css`, measured on their
+`origin/main`), so nothing shipped black. The claim came from reading a stale local working tree
+instead of `origin/main` — the failure this repo's own rules name explicitly. What was real is the
+**contract**: the package could not render its own components legibly without help, and every
+harness in `scripts/` demonstrated it by rendering them black. A guarantee that depends on every
+consumer remembering one line is not a guarantee, which is why JH230 fixed it rather than
+documenting it — but it was a latent gap, not a live outage.
 `Button` `outline`/`ghost`, `Label`, `Input`, `Textarea`, `PortalConversationHeader` and
 `PortalConversationFooter`; and the worst instance is `MemberError`'s retry control, which that
 component's own docstring calls *"the one difference a member reads without reading"*.
@@ -1022,13 +1043,15 @@ heuristic, because testing for `rgb(0,0,0)` would confuse *undeclared* with *del
 
 ```
 node scripts/verify-member-legibility.mjs
-→ 1 passed, 7 failed   ← red on purpose; see JH230
+→ 2 passed, 0 failed
 ```
 
-**That red is the finding's record, not a broken check.** It carries the six in a `KNOWN` register
-so a *seventh* is reported as new and unfiled rather than lost in the noise, and it goes green on
-its own — with no edit to the check — as each fix lands. It is not in CI, along with every other
-browser-driven script here (no lockfile), so it blocks nobody.
+It shipped **red**, carrying the six in a `KNOWN` register so a *seventh* would read as new rather
+than be lost in the noise. JH230 then fixed all six and it went green **on its own, with no edit to
+the check** — each fix printed `NOTE  <x> no longer inherits — remove it from KNOWN`. The register is
+now empty, which is its resting state; an entry gets added back only to file a defect that is
+deliberately deferred. It is not in CI, along with every other browser-driven script here (no
+lockfile).
 
 #### Two findings recorded, not fixed
 

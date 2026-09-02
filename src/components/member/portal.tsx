@@ -244,7 +244,7 @@ function PortalConversationHeader({ className, ...props }: React.ComponentProps<
     <div
       data-slot="portal-conversation-header"
       className={cn(
-        'border-line flex min-w-0 shrink-0 items-center gap-[var(--space-2)] border-b p-[var(--space-2)]',
+        'text-ink border-line flex min-w-0 shrink-0 items-center gap-[var(--space-2)] border-b p-[var(--space-2)]',
         className,
       )}
       {...props}
@@ -258,7 +258,7 @@ function PortalConversationFooter({ className, ...props }: React.ComponentProps<
     <div
       data-slot="portal-conversation-footer"
       className={cn(
-        'border-line min-w-0 shrink-0 border-t p-[var(--space-2)]',
+        'text-ink border-line min-w-0 shrink-0 border-t p-[var(--space-2)]',
         className,
       )}
       {...props}
