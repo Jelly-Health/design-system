@@ -4,18 +4,27 @@
  *
  *     node scripts/verify-member-legibility.mjs
  *
- * ── 🔴 THIS SCRIPT IS RED ON `origin/main`, DELIBERATELY ─────────────────────────────────────
- * Six package components inherit their resting text colour and the package declares no base
- * `body { color }`, so they render **black** — 20.12:1 in light, **1.05:1** in dark. That is
- * **[JH230](https://trello.com/c/QCQBL2Nj)** (raised 2026-09-02 by this card; the register in part
- * A is the list), not a regression you caused. This script is the finding's permanent record, and
- * it goes green on its own — with no edit to the check — as each fix lands and its `NOTE` line
- * tells you to drop it from `KNOWN`. **Do not "fix" it by relaxing the check.**
+ * ── It is GREEN, and it was red for one card ────────────────────────────────────────────────
+ * JH221 raised this file red: six components declared no resting text colour and the package
+ * declares no base `body { color }`, so they resolved to the browser default — 20.12:1 in light,
+ * **1.05:1 in dark**. [JH230](https://trello.com/c/QCQBL2Nj) fixed all six, and the `KNOWN`
+ * register below is now empty. **Do not delete it.** An empty register is the check's resting
+ * state; the register exists so that a future defect reads as NEW rather than merging into a wall
+ * of red, and re-adding an entry is how a deliberately-deferred one gets filed.
  *
- * It is not in `.github/workflows/verify.yml`, along with every other browser-driven check here —
- * the package has no lockfile, so CI runs only the five dependency-free scripts. Two more
- * (`verify-member-plane.mjs`, `verify-touch-target.mjs`) are already red on `main` for an
- * unrelated reason (JH229). A red script here does not block anyone.
+ * ⚠️ **The severity JH221 first reported was too high, and the correction is worth keeping.** Both
+ * real consumers already set `body { @apply bg-background text-foreground }` — `web-app/v2`
+ * (`v2/app/globals.css`) and `Jelly-Health/website` (`app/globals.css`), both measured on their
+ * `origin/main` 2026-09-02 — so the six were never black-on-black in a shipped app. What was real
+ * is the **contract**: the package could not render its own components legibly on its own, and
+ * every harness in `scripts/` proved it by rendering them black. A guarantee that depends on every
+ * consumer remembering one line is not a guarantee.
+ *
+ * That is also what decided the fix. A base layer in `src/styles/index.css` — the obvious move, and
+ * what shadcn ships — **cannot reach `v2` at all**: v2 imports
+ * `@jelly-health/design-system/tokens.css`, not `/styles`, so a rule in `index.css` reaches only
+ * the website. Six explicit classes travel with the components regardless of which entry point a
+ * consumer imports. The measurement, not the aesthetics, picked the option.
  *
  * ── What it checks, and why neither existing harness could ───────────────────────────────────
  * `verify-contrast.py` computes 152 token pairs and all of them pass. That is the whole reason
@@ -199,12 +208,9 @@ const SURFACES = {
  * it is the control the whole error-vs-empty distinction rests on.
  */
 const KNOWN = new Map([
-  ['button', 'Button variant="outline" and variant="ghost" set a colour only on :hover, never at rest. This is the one that matters most: MemberError constructs an outline Button as its retry control, and that component\'s own docstring calls it "the one difference a member reads without reading".'],
-  ['label', 'Label declares no resting text colour — every form label on the member plane'],
-  ['input', 'Input declares no colour for the text a member types. Invisible to a text-node walk — see part A.'],
-  ['textarea', 'Textarea, the same'],
-  ['portal-conversation-header', 'PortalConversationHeader declares no text colour'],
-  ['portal-conversation-footer', 'PortalConversationFooter declares no text colour'],
+  /* Empty, and that is the resting state — JH230 fixed all six JH221 found. Add an entry here only
+   * to file a defect that is deliberately NOT being fixed yet, keyed by `data-slot` or tag name,
+   * with the card that owns it. Everything not listed fails as NEW, which is the point. */
 ])
 
 if (!existsSync(CSS_CACHE)) {
@@ -357,7 +363,7 @@ check(`every text element on a member surface clears 4.5:1 in both themes (${low
 
 console.log(`\n${pass} passed, ${fail} failed`)
 if (fail > 0 && newly.length === 0 && lowContrast.length === 0) {
-  console.log('\n🔴 Red is EXPECTED here — every failure above is the filed JH221 finding.')
-  console.log('   See this file\'s docstring. Do not relax the check; fix the components.')
+  console.log('\n🔴 Every failure above is in the KNOWN register, i.e. filed and deliberately')
+  console.log('   deferred. Fix the components or move the card; do not relax the check.')
 }
 process.exit(fail > 0 ? 1 : 0)

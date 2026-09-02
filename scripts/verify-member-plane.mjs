@@ -381,11 +381,30 @@ for (const [name, render, slot, assertion] of compoundCases) {
  * Verified while fixing JH229: nothing had actually drifted between `6472904` and `b264d78`. The
  * guard had stopped being able to see, not stopped being satisfied. */
 const PRE_AXIS_CONSOLE = {
-  // Label -- 11 classes
+  /* Label -- 12 classes.
+   *
+   * ⚠️ `text-foreground` was ADDED by JH230 (2026-09-02), deliberately, and this row was edited in
+   * the same commit exactly as the note above instructs. It is the one intended departure from
+   * `6472904` in this table, so re-deriving it with `git show 6472904:src/components/ui/label.tsx`
+   * yields 11, not 12. That is expected; everything else in this table still re-derives exactly.
+   *
+   * Why it was allowed to move: `Label` declared no resting text colour at all, so its colour came
+   * from whatever ancestor a consumer happened to supply, and the package supplies none — black in
+   * a bare page, i.e. 1.05:1 in dark (JH221's finding). The class list therefore had to change; the
+   * question was whether anything RENDERS differently, and it does not. Measured 2026-09-02, both
+   * planes, before and after, with a consumer that sets `body { text-foreground }` — which both
+   * real consumers do (`web-app/v2/app/globals.css`, `Jelly-Health/website/app/globals.css`):
+   *
+   *     light  rgb(32, 28, 24)     dark  rgb(247, 248, 248)      ← identical before and after
+   *
+   * Only the no-base-layer case moves, from `rgb(0, 0, 0)` to the same values above. So the console
+   * plane's PIXELS are unchanged in every shipped app and the guard's promise holds in substance;
+   * what changed is that the package now guarantees it instead of inheriting it. */
   Label: `
     flex font-medium gap-2 group-data-[disabled=true]:opacity-50
     group-data-[disabled=true]:pointer-events-none items-center leading-none
     peer-disabled:cursor-not-allowed peer-disabled:opacity-50 select-none text-console-sm
+    text-foreground
   `,
   // SelectTrigger -- 37 classes
   SelectTrigger: `

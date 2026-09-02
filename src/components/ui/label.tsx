@@ -24,7 +24,7 @@ import { cn } from '../../lib/utils'
  * relationship as one unit, and a label it did not render is a label it cannot wire up.
  */
 const labelVariants = cva(
-  'flex items-center gap-2 leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
+  'text-foreground flex items-center gap-2 leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
   {
     variants: {
       plane: {
