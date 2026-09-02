@@ -93,6 +93,77 @@ just by reading the token file. Not fixed as part of this sync — it's a bug in
 own source, reported separately; the `Wordmark.tsx` preview here composes against the *correct*
 tokens, not what the doc comment (incorrectly) says.
 
+**`toast.tsx`'s stacking comment does not match what it renders.** The console viewport is
+`flex-col-reverse` anchored `bottom-4 right-4`, and the source comment says this "puts the LAST
+child (the newest toast) nearest the anchor edge (the corner)". `column-reverse` lays children
+bottom-to-top, so the FIRST DOM child is nearest the bottom. Measured 2026-09-02 in headless
+chromium on the `Toaster` preview (DOM order → viewport `top`, smaller = higher on screen):
+
+    dom#0  top=319  toast-overflow  "+1 more"
+    dom#1  top=246  toast           oldest visible
+    dom#2  top=148  toast
+    dom#3  top=49   toast           newest
+
+So the **newest toast is farthest from the corner**, and the `+N more` chip — rendered first in
+`toaster.tsx` — occupies the corner-most slot. Whether the comment or the layout is the thing to
+change is a JH202/JH224 design call, not a sync decision, so nothing here was touched. Reported
+rather than fixed.
+
+## 🔴 The synth entry only walks `.tsx`/`.jsx` — every export in a `.ts` file was missing from the bundle
+
+Found 2026-09-02 during the toast sync, and it had been live since the **first** sync. In
+synth-entry mode `resolvePackage` builds the entry from `walk(srcRoot, n => /\.(tsx|jsx|mdx?)$/)`.
+There is no `.ts` in that pattern, so **`src/lib/utils.ts` and `src/components/ui/use-toast.ts` were
+never in the entry at all.** Their exports are still *bundled* (esbuild follows the imports from
+`toaster.tsx` etc., so the components work), but they are not on `window.JellyDS`.
+
+Measured in a real browser, not inferred: `Object.keys(window.JellyDS).length` was **93**, and
+`cn`, `toast`, `dismiss`, `remove`, `useToasts` were all absent. `getToastDuration` and
+`planeVisibility` were present — they live in `toast.tsx`. That is the tell: the split is by FILE
+EXTENSION, not by anything about the export.
+
+This mattered twice over. `conventions.md` has told the design agent *"Merge classes with `cn()`,
+exported from the package root"* since the first sync, and `cn` was not there — the one class of
+error the conventions validation pass exists to catch, and it slipped through because the pass
+checked class names and component names but not the helper. And `Toaster`'s preview failed outright
+with `TypeError: (0, ds_exports.toast) is not a function`.
+
+**Fixed with `cfg.extraEntries: ["./src/lib/utils.ts", "./src/components/ui/use-toast.ts"]`** —
+package-relative paths are supported and workspace-bounded. Export count went **93 → 99**.
+
+⚠️ **This is a standing trap, not a one-off.** Any future public API added in a `.ts` file is
+invisible to the global with no error anywhere — the build succeeds, validate passes, and only a
+design agent calling the function finds out. **Whenever a `.ts` file gains an export meant to be
+public, add it to `extraEntries`.** Check with:
+
+```sh
+git ls-files 'src/**/*.ts' | grep -v '\.d\.ts$'   # every file the synth entry cannot see
+```
+
+and confirm against the live list, which is the only authority — `grep`ping `_ds_bundle.js` for a
+name gives false negatives (the name appears in the bundled source either way):
+
+```js
+// in a preview page, headless or devtools
+Object.keys(window.JellyDS).sort()
+```
+
+## Toast previews — two techniques that are load-bearing
+
+- **`ToastViewport` is `position: fixed` and `Toaster` owns it**, with no className to pass through,
+  so the stack renders outside any captured area and the card screenshots blank (4.5 KB). Fix: give
+  the stage a **transform**, which makes it the containing block for fixed descendants —
+  `style={{ transform: 'translateZ(0)' }}` on a sized wrapper. The stack then anchors bottom-right
+  *inside* the card. This styles the stage only; the component is untouched. PNG went 4.5 KB → 45 KB.
+- **Seed only `tier: "error"` toasts in the `Toaster` preview.** `info` returns 4000/5000ms from
+  `getToastDuration`, so an info-seeded card auto-dismisses and screenshots empty a few seconds after
+  load — an intermittently blank card, which is worse than a broken one. `error` returns `Infinity`.
+  The info tier's appearance is covered by `Toast`'s own cells, where `open` is passed as a literal
+  `true` so nothing expires regardless of tier.
+- The **member** plane's "replaces, not stacks" rule is a transition, not a state — a still frame of
+  it is indistinguishable from one toast arriving. Deliberately not previewed; noted here rather than
+  left looking like an omission.
+
 ## 🔴 In synth-entry mode, a NON-NULL `componentSrcMap` entry silently kills discovery
 
 Found 2026-09-02, cost a confusing build. `lib/source-kit.mjs` builds its component list from the
@@ -161,6 +232,13 @@ fallback. Also expect **no visible avatar circle**: `AvatarFallback`'s `bg-muted
 near-white token sitting on `Thread`'s near-white `--sur`, so the disc is invisible by design, not
 by defect. Not a preview bug; don't "fix" it.
 
+`[GRID_OVERFLOW] escape` on **`Toast`** — **triaged as a false positive, deliberately left on
+`cardMode: "column"` rather than the `single` the warn prescribes.** The detector keys off the
+computed `position`/portal of Radix's viewport, not off actual overflow; the four cells were checked
+on the rendered card and every toast sits inside its own row with nothing clipped. Taking `single`
+would drop three of four cells — the tier × plane matrix is the whole value of that card. `Toaster`
+*is* on `single` (one export, so nothing is lost) and no longer warns.
+
 Otherwise clean — final `package-validate.mjs` run: 24/24 render, 0 bad, 0 thin, 0
 variants-identical, 0 grid overflow.
 
@@ -168,8 +246,10 @@ variants-identical, 0 grid overflow.
 ## Coverage — the member plane, closed 2026-09-02
 
 The first run synced the 19 shadcn primitives + `Wordmark` (20). The **2026-09-02 member re-sync**
-added JH212's four member compositions for **24 components** — everything exported from
-`src/components/` today.
+added JH212's four member compositions for **24 components**. ⚠️ That was true for about an hour: JH224's toast merged the same day and the
+2026-09-02 toast re-sync took it to **26** (`Toast`, `Toaster`; seven sub-parts pruned). Do not
+read any component count here as current — check `origin/main` against the uploaded
+`_ds_sync.json`.
 
 | Component | Landed | Preview |
 |---|---|---|

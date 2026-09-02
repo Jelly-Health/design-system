@@ -23,6 +23,8 @@
 
 **Radius has a split vocabulary, not one scale**: `rounded-md` (6px, buttons/inputs), `rounded-lg`/`rounded-xl` (12px, cards/panels/dialogs — `xl` is capped at `lg`'s value on purpose, nothing rounder belongs on a panel), `rounded-sm` (4px, badges).
 
+**Notifications go through `Toaster` + `toast()`, never a hand-built banner.** Mount exactly one `<Toaster plane="console" />` (or `plane="member"`) per app, then call `toast({ tier, description, action? })` from anywhere — it is a module-level store, so it needs no context. **`tier` is the whole design**: `info` auto-dismisses (4s console / 5s member) and must only ever announce something already durably visible elsewhere; `error` never auto-dismisses, because the toast *is* the entire notice. Console stacks up to 3 with a `+N more` chip; member shows exactly 1 and a new toast replaces it. Pass a stable `id` to de-dupe a repeated failure instead of stacking it.
+
 **Merge classes with `cn()`**, exported from the package root — the same conflict-resolution every component here already uses internally, so a class you pass in a `className` prop overrides the component's own default correctly.
 
 ## Where the truth lives

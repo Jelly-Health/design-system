@@ -54,6 +54,13 @@
     "TabsTrigger": null,
     "ThreadDay": null,
     "ThreadEvent": null,
+    "ToastAction": null,
+    "ToastBody": null,
+    "ToastClose": null,
+    "ToastDescription": null,
+    "ToastIcon": null,
+    "ToastProvider": null,
+    "ToastViewport": null,
     "TooltipContent": null,
     "TooltipProvider": null,
     "TooltipTrigger": null
@@ -80,6 +87,12 @@
     "Thread": {
       "cardMode": "column"
     },
+    "Toast": {
+      "cardMode": "column"
+    },
+    "Toaster": {
+      "cardMode": "single"
+    },
     "Tooltip": {
       "cardMode": "single",
       "viewport": "320x160"
@@ -88,5 +101,9 @@
   "readmeHeader": ".design-sync/conventions.md",
   "docsMap": {
     "MemberField": ".design-sync/docs/MemberField.md"
-  }
+  },
+  "extraEntries": [
+    "./src/lib/utils.ts",
+    "./src/components/ui/use-toast.ts"
+  ]
 }
