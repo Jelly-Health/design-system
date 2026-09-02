@@ -27,6 +27,8 @@
     "DialogPortal": null,
     "DialogTitle": null,
     "DialogTrigger": null,
+    "MessageGroup": null,
+    "MessageSender": null,
     "PopoverContent": null,
     "PopoverTrigger": null,
     "RadioGroupItem": null,
@@ -50,6 +52,8 @@
     "TabsContent": null,
     "TabsList": null,
     "TabsTrigger": null,
+    "ThreadDay": null,
+    "ThreadEvent": null,
     "TooltipContent": null,
     "TooltipProvider": null,
     "TooltipTrigger": null
@@ -59,18 +63,30 @@
       "cardMode": "single",
       "viewport": "480x360"
     },
+    "MessageBubble": {
+      "cardMode": "column"
+    },
+    "PendingValue": {
+      "cardMode": "column"
+    },
     "Popover": {
       "cardMode": "single",
       "viewport": "320x200"
     },
-    "Tooltip": {
-      "cardMode": "single",
-      "viewport": "320x160"
-    },
     "Select": {
       "cardMode": "single",
       "viewport": "320x280"
+    },
+    "Thread": {
+      "cardMode": "column"
+    },
+    "Tooltip": {
+      "cardMode": "single",
+      "viewport": "320x160"
     }
   },
-  "readmeHeader": ".design-sync/conventions.md"
+  "readmeHeader": ".design-sync/conventions.md",
+  "docsMap": {
+    "MemberField": ".design-sync/docs/MemberField.md"
+  }
 }
