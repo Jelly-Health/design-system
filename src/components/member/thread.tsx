@@ -22,15 +22,24 @@ import { cn } from '../../lib/utils'
  * It renders no empty state. That is not an omission: "a failed load must never read as 'nothing
  * to do'" is a house rule, and a container that quietly draws "No messages" when handed zero
  * children makes the error case and the empty case pixel-identical at the exact moment they must
- * differ. The consumer decides which state it is in and renders it; the member state patterns are
- * their own piece of JH212.
+ * differ. The consumer decides which state it is in and renders it; the member state patterns
+ * shipped separately as JH218 and are in `./state` and `./skeleton`.
+ *
+ * ── Overflow: this is the container that scrolls, and the body never does ────────────────────
+ * `overflow-y-auto` engages only once a consumer constrains the height, which is the case the
+ * docstring above has always described ("the scroll region") and never actually implemented — a
+ * thread longer than its screen simply grew the page. Note the side effect and that it is wanted:
+ * CSS computes `overflow-x: visible` to `auto` when the other axis is not visible, so anything too
+ * WIDE now scrolls inside this box rather than pushing the document sideways. `min-w-0` is what
+ * lets the box shrink below its content when it is itself a flex item; without it a long word in a
+ * bubble widens the thread instead of wrapping in it.
  */
 function Thread({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="thread"
       className={cn(
-        'bg-sur flex flex-col gap-[var(--gap-member-thread)] p-[var(--pad-member-screen)]',
+        'bg-sur flex min-w-0 flex-col gap-[var(--gap-member-thread)] overflow-y-auto p-[var(--pad-member-screen)]',
         className,
       )}
       {...props}
@@ -87,7 +96,10 @@ function ThreadEvent({
       className={cn('border-line border-y py-3', className)}
       {...props}
     >
-      <p className="text-ink-2 text-member-caption text-center [font-variant-numeric:var(--numeric-member)]">
+      {/* `break-words`: an event row names a destination and can carry a long one — a medication
+          name, a member's own words quoted back. Centred text that cannot break runs out of the
+          row in both directions at once. */}
+      <p className="text-ink-2 text-member-caption text-center break-words [font-variant-numeric:var(--numeric-member)]">
         {children}
       </p>
       {action ? (
@@ -104,7 +116,7 @@ function ThreadEvent({
          * a member actually taps may not. The real fix is `plane="member"` on the control itself
          * (JH212, second slice) — see `Input`'s docstring. Prefer passing a member-plane control
          * here; this floor stays as the backstop for anything else. */
-        <div className="text-member-caption mt-1 flex min-h-[var(--touch-min)] items-center justify-center font-medium">
+        <div className="text-member-caption mt-1 flex min-h-[var(--touch-min)] items-center justify-center break-words font-medium">
           {action}
         </div>
       ) : null}

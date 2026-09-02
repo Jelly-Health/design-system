@@ -59,6 +59,9 @@ it does not get re-litigated as though nobody had thought about it.
   identically — and, since 2026-09-02, resolve them *correctly*: it now tells tailwind-merge which
   `text-*` names are font sizes, without which they were being silently deleted by colour classes
   and vice versa. See § *`cn()` knows this package's font sizes*.
+- **The member state patterns** — loading, empty, failed, and the overflow rules — added 2026-09-02
+  by JH218. Not four components so much as one type that makes three of the four impossible to
+  confuse: see § *The four states*.
 
 ## What landed, and what is still absent
 
@@ -688,8 +691,104 @@ Contrast for both message roles was measured against every surface a member fiel
 2026-09-02, both themes. All twelve pairings clear 4.5:1; the floor is `--ink-3` on `--sur` in light
 at **5.14:1**.
 
+#### The four states — loading, empty, failed, and too much content
+
+JH218. `src/components/member/state.tsx` and `src/components/member/skeleton.tsx`.
+
+🔴 **A failed load must never read as "nothing to do."** That house rule is the whole of this card,
+and it is why `Thread` has always refused to draw its own empty state. The problem with leaving it
+there is that the rule gets broken by nobody deciding anything: a consumer with four states and
+three renderers reaches for the nearest one. So this is not "a spinner and an empty state" — it is a
+type where **the wrong state does not compile**, the same move `MemberField` makes by having no
+`invalid` prop.
+
+```tsx
+import {
+  MemberStateView, memberStateFrom, type MemberState,
+} from "@jelly-health/design-system/member/state";
+
+<MemberStateView
+  state={memberStateFrom(messages)}
+  skeleton="thread"
+  empty={{ title: "No messages yet", body: "Alex writes here when there is something to say." }}
+  error={{ title: "We couldn't load your messages", body: "This is not an empty conversation.", onRetry }}
+>
+  {(items) => items.map((m) => <MessageBubble key={m.id} voice={m.voice}>{m.text}</MessageBubble>)}
+</MemberStateView>
+```
+
+**It is deliberately not the console's `PanelState<T>`.** That type is three states —
+`loading | ready | error` — with **empty folded into `ready` with zero items**, which is exactly the
+collapse this rule forbids. `queue-panel.tsx` keeps empty and failed apart by hand instead: an em
+dash rather than a `0`, a sentence that says *"This is not an empty queue"*, and a reader that
+resolves `unavailable` rather than an empty view. All three are right, and all three are conventions
+a second call site can simply not follow. Here:
+
+```ts
+type MemberState<T> =
+  | { status: "loading" }
+  | { status: "empty" }
+  | { status: "ready"; items: readonly [T, ...T[]] }   // ← non-empty, by type
+  | { status: "error" }
+```
+
+**Three things a consumer cannot express**, which is the part that does the work:
+
+| Wrong state | Why it cannot be written |
+|---|---|
+| `ready` with nothing in it | `items` is a non-empty tuple. `{ status: "ready", items: [] }` does not compile; `memberStateFrom` is the one sanctioned way across the narrowing, and it returns `empty` for an empty list |
+| An empty screen with a retry | `MemberEmpty` has no such prop, and neither does the view's `empty` slot. A retry is the affordance that marks a failure; handing it to the empty state is the collapse in one prop |
+| A failure the member cannot act on | `onRetry` is **required** on `MemberError`. A dead end — no control, no next step, just words — is the state that most reads as "nothing to do" |
+
+`MemberStateView` closes the last gap, mis-wiring: it owns the switch and builds both blocks itself,
+so the consumer supplies words and never markup, and `skeleton` is a discriminant (`"thread" |
+"screen"`) rather than a node slot for the same reason.
+
+**What separates empty from failed on screen is structure, not copy** — copy would not survive a
+consumer writing *"Nothing to show"* in both. `MemberEmpty` is text on the page ground: no box, no
+border, no icon, no control, and no call to action (A2.1 — *"there is nothing for Alex to start"*).
+`MemberError` announces itself with `role="alert"`, sits on `--card` inside a `--line-strong` edge
+(`--card` is **1.09 ΔL\*** from `--bg` in light, so a hairline would leave it undelimited — the same
+argument `MessageBubble` makes), and always carries a `plane="member"` retry. It is **not** drawn in
+`--danger`: a failed read is not a clinical event, and there is no severity tier below it because
+this system has no ramp.
+
+**The skeletons are member density and the fill was measured, not chosen.** A skeleton block has no
+text in it and no border on it, so it has to be delimited by fill alone — and `tokens.css` already
+sets the threshold for that question at 3 ΔL\*. The obvious pick fails it: `--mut` on `--sur` is
+**2.77** in light (and 10.04 in dark, which is precisely the "reads as distinct in one theme and
+identical in the other" trap). `--line` is the one existing role that clears 3 ΔL\* on all three
+member surfaces in both themes, so that is the fill. `ThreadSkeleton` renders a real `<Thread>`
+rather than re-declaring its container classes; block heights are a member type step times its own
+mapped leading, and the control block in `ScreenSkeleton` is `--touch-min`, never a button height.
+
+**Overflow is a rule about tracks, and it changed four existing components.** *Text that can outgrow
+its track wraps or scrolls in its own container; clipped text is a bug, and the page body never
+scrolls sideways.* `MessageSender` needed `max-w-full` on the row **and** `min-w-0 break-words` on
+the name — either alone leaves the bug, because `self-start` sizes the row to its content so the
+name has no width to wrap inside until the row is capped. `MessageBubble` takes `break-words` in its
+base (the 88% cap stops a long *sentence* and does nothing about a long *token*), `MemberField`'s
+label and messages take it too, and `Thread` finally has the `overflow-y-auto` its own docstring has
+always described.
+
+**Verified by `scripts/verify-member-states.mjs`** — 46 cases in four parts, because no one part can
+see the whole claim: structure via `renderToStaticMarkup`, **types** via `tsc` over a fixture whose
+eight `@ts-expect-error` directives assert that the wrong state does *not* compile, **layout** in
+real Chromium at 360px in **both themes**, and the star-export precondition (109 names, 0
+collisions). Seven mutations were applied and reverted; each failed. The card's own — *make the
+error state render the empty state's markup* — fails eight cases, and the two type mutations fail
+nothing else, which is the argument for having both parts.
+
+⚠️ **`yarn typecheck` still has no lockfile to run against, but `tsc` itself does run** — borrow
+`react`, `react-dom`, `esbuild`, `typescript`, `playwright` and `@tailwindcss/postcss` by symlinking
+a sibling repo's install into `node_modules/` (`.design-sync/NOTES.md` records the recipe and why
+the Tailwind major has to match), then `node node_modules/typescript/bin/tsc --noEmit`. **The
+baseline is 2 errors**, both `RefAttributes` variance in `ui/badge.tsx` and `ui/button.tsx` from the
+borrowed `@types/react`, and the bar is no new ones.
+
 `scripts/verify-member-plane.mjs` renders these components and asserts what their docstrings claim —
-20 cases, mutation-tested against six ways of breaking them. Two of those mutations are bugs this
+25 cases as of 2026-09-02 (this sentence said 20 until JH218 re-ran it; JH224 added five `Toast`
+cases without anything prompting a recount), mutation-tested against six ways of breaking them. Two of those mutations are bugs this
 work actually shipped and then caught: the optional marker rendering on every field that was not
 explicitly required, and `Button` declaring `plane` without ever destructuring it, so the prop
 leaked to the DOM and the variant did nothing while type-checking clean.
