@@ -1,8 +1,10 @@
 # The package has no build and no lockfile, so there is nothing to compile and
-# no install to cache. What it does have is two invariants that fail silently
-# in a browser -- a font subset that renders slightly wrong, and a type ramp
-# that resizes a consumer's existing text without an error. Both are checked
-# here because neither is visible in a diff or in a green a11y run.
+# no install to cache. What it does have is invariants that fail silently in a
+# browser -- a font subset that renders slightly wrong, a type ramp that resizes
+# a consumer's existing text without an error, and a colour role edited past a
+# contrast floor. All are checked here because none is visible in a diff, and a
+# green axe run does not see the last one either: axe reads a rendered page, and
+# a pair can be broken in this file long before any page puts it on screen.
 name: verify
 
 on:
@@ -31,3 +33,14 @@ jobs:
           python-version: '3.12'
       - run: pip install fonttools brotli
       - run: python3 scripts/verify-fonts.py
+
+  contrast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Stdlib only -- the WCAG formula is twelve lines, and a dependency here
+      # would be a dependency in the one check that must never fail to run.
+      - run: python3 scripts/verify-contrast.py --table
