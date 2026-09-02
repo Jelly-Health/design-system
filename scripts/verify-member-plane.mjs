@@ -12,6 +12,9 @@
  *      `buttonVariants`. `plane="member"` compiled, type-checked, reviewed clean and did nothing.
  *      `tsc` cannot see it: `VariantProps` makes the prop optional and the rest-spread accepts it.
  *   B. `MemberField`'s two house rules, below.
+ *   C. Since JH222, that the five remaining primitives took the axis too -- and, for the parts
+ *      that cannot be rendered here at all, that they at least destructure it. See the JH222
+ *      block at the end of this comment for why that distinction is load-bearing.
  *
  * Both are house rules with a specific failure mode, and both are the kind that stay true in a
  * docstring long after the code has stopped honouring them:
@@ -49,7 +52,35 @@
  *   - reverting `Button` to not destructuring `plane` (the real bug, caught by writing this file)
  *       -> all four Button member cases fail, including the DOM-leak one
  *
+ * JH222 added `Label`, `SelectTrigger` and `SelectItem`. Their mutations, same discipline:
+ *
+ *   - `Label` in the exact JH212 shape -- `plane` declared and typed, never destructured, never
+ *     used (all three edits, since removing only the destructure leaves `data-plane={plane}`
+ *     referencing a name that no longer exists and the script dies on a ReferenceError instead)
+ *       -> 3 fail: the member case, the DOM-leak case, and the destructure case
+ *   - `SelectTrigger` not destructuring `plane`
+ *       -> 7 fail, including the console-equivalence case, which throws rather than compares
+ *   - `SelectItem` in the exact JH212 shape
+ *       -> 1 fail, and it is the SOURCE check, not a rendered one. Worth stating plainly: this is
+ *          the case that justifies the destructure check existing at all. `SelectItem` renders
+ *          through a Portal and produces NO server-rendered DOM -- verified, not assumed -- so
+ *          every render-based assertion above is structurally blind to it. Without the source
+ *          check this mutation is silent, which is precisely the shape #16 shipped.
+ *   - `Label` console variant emptied of `text-console-sm`
+ *       -> 2 fail: the console case, and equivalence (11 before, 10 after, lost text-console-sm)
+ *   - `Label` member variant pointed back at the console token   -> 1 (the member case)
+ *   - `SelectTrigger` console variant loses `data-[size=sm]:h-8`
+ *       -> 1, equivalence only (37 vs 36). No rendered case looks at the `sm` step, so the diff
+ *          against `origin/main` is the only thing standing between a dropped class and a clean
+ *          review -- which is the whole argument for comparing against the ref instead of against
+ *          a list of expectations retyped here
+ *   - `SelectTrigger` member variant keeping `data-[size=default]:h-9` too -> 1
+ *   - `SelectItem` member variant losing the touch floor                   -> 1
+ *
+ * Negative control: the unmodified tree -> 42 passed, 0 failed, rc=0.
+ *
  */
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,11 +107,42 @@ function load(relPath) {
 
 const { createRequire } = await import("node:module");
 const require = createRequire(import.meta.url);
+
+/* Same loader, but from a source STRING rather than a path -- used to render the `origin/main`
+ * copy of a component alongside the working-tree copy, for the console-equivalence check below. */
+function loadFrom(src) {
+  const patched = src.replace(
+    /import \{ cn \} from ['"].*?['"]/,
+    "const cn = (...a) => a.filter(Boolean).join(' ')",
+  );
+  const js = transformSync(patched, { loader: "tsx", format: "cjs", jsx: "automatic" }).code;
+  const module = { exports: {} };
+  const req = (id) => (id === "react" ? React : require(id));
+  new Function("module", "exports", "require", js)(module, module.exports, req);
+  return module.exports;
+}
+
+const gitShow = (relPath) =>
+  execFileSync("git", ["show", `origin/main:${relPath}`], { cwd: ROOT, encoding: "utf8" });
+
+/* The class list of the element carrying `data-slot="<slot>"`. The compound primitives cannot be
+ * rendered alone (Radix throws "`SelectTrigger` must be used within `Select`"), so their cases
+ * render the whole subtree and pick the one element under test back out of it. */
+function classesOf(html, slot) {
+  const m = html.match(new RegExp(`data-slot="${slot}"[^>]*?\\bclass="([^"]*)"`));
+  if (m === null) throw new Error(`no element with data-slot="${slot}" in: ${html.slice(0, 300)}`);
+  return m[1];
+}
+
+const setOf = (classes) => new Set(classes.split(/\s+/).filter(Boolean));
+
 const { MemberField } = load("src/components/member/field.tsx");
 const { Button } = load("src/components/ui/button.tsx");
 const { Input } = load("src/components/ui/input.tsx");
 const { Textarea } = load("src/components/ui/textarea.tsx");
 const { ToastClose, ToastAction, toastVariants } = load("src/components/ui/toast.tsx");
+const { Label } = load("src/components/ui/label.tsx");
+const Sel = load("src/components/ui/select.tsx");
 
 const TOUCH = "min-h-[var(--touch-min)]";
 const planeCases = [
@@ -105,6 +167,31 @@ const planeCases = [
   ["ToastClose plane does not leak to the DOM as an attribute", ToastClose, { plane: "member" }, (h) => !/ plane=/.test(h)],
   ["ToastAction plane=member reaches the member caption size", ToastAction, { plane: "member", altText: "Retry" }, (h) => h.includes("text-member-caption")],
   ["ToastAction default stays console", ToastAction, { altText: "Retry" }, (h) => h.includes("text-console-sm") && !h.includes("text-member-caption")],
+  // Label (JH222) is the type-only half of the plane: a label has no hit target worth flooring,
+  // so `member` moves 12px to the member body ramp and does nothing else.
+  ["Label plane=member reaches the member body size", Label, { plane: "member" }, (h) => h.includes("text-member-body")],
+  ["Label default stays console", Label, {}, (h) => h.includes("text-console-sm") && !h.includes("text-member-body")],
+  ["Label plane does not leak to the DOM as an attribute", Label, { plane: "member" }, (h) => !/ plane=/.test(h)],
+];
+
+/* ── Compound primitives (JH222) ─────────────────────────────────────────────────────────────
+ * `SelectTrigger`, `SelectItem` and `RadioGroupItem` throw outside their Root, so each case
+ * renders the Root subtree and `classesOf` picks the element under test back out. Cases are
+ * `[name, () => html, slot, assertion]` -- the assertion receives the CLASS LIST of that one
+ * element, not the whole markup, so a class landing on the wrong sub-part cannot satisfy it. */
+const inSelect = (part, props) =>
+  renderToStaticMarkup(
+    React.createElement(Sel.Select, { open: true }, React.createElement(part, props, "Option")),
+  );
+
+const compoundCases = [
+  ["SelectTrigger plane=member reaches the touch floor", () => inSelect(Sel.SelectTrigger, { plane: "member" }), "select-trigger", (c) => c.includes(TOUCH)],
+  ["SelectTrigger plane=member reaches the member body size", () => inSelect(Sel.SelectTrigger, { plane: "member" }), "select-trigger", (c) => c.includes("text-member-body")],
+  // The member plane must not also carry the console density ramp: `size` is a console-only knob
+  // and both its steps are below the floor -- see the component docstring.
+  ["SelectTrigger plane=member drops the console size ramp", () => inSelect(Sel.SelectTrigger, { plane: "member" }), "select-trigger", (c) => !c.includes("data-[size=default]:h-9") && !c.includes("data-[size=sm]:h-8")],
+  ["SelectTrigger default stays console", () => inSelect(Sel.SelectTrigger, {}), "select-trigger", (c) => c.includes("text-console-sm") && c.includes("data-[size=default]:h-9") && !c.includes("text-member-body")],
+  ["SelectTrigger plane does not leak to the DOM as an attribute", () => inSelect(Sel.SelectTrigger, { plane: "member" }), "select-trigger", (_c, h) => !/ plane=/.test(h)],
 ];
 
 const html = (props) =>
@@ -195,5 +282,146 @@ for (const [name, props, assertion] of cases) {
     console.log(`      ${out}`);
   } else pass += 1;
 }
+for (const [name, render, slot, assertion] of compoundCases) {
+  let ok = false;
+  let detail = "";
+  try {
+    const out = render();
+    detail = out;
+    ok = assertion(classesOf(out, slot), out);
+  } catch (e) {
+    detail = `threw: ${e.message}`;
+  }
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}`);
+  if (ok) pass += 1;
+  else {
+    fail += 1;
+    console.log(`      ${detail.slice(0, 400)}`);
+  }
+}
+
+/* ── Console equivalence against `origin/main` (JH222) ───────────────────────────────────────
+ * The 100% of call sites that are console today must render exactly what they rendered before the
+ * axis existed. Giving a primitive a plane means MOVING classes out of a base string into a
+ * `console` variant, and a class dropped or fat-fingered on the way is invisible in review -- the
+ * component still compiles and still looks approximately right.
+ *
+ * So this does not restate the expected classes, which would just be the same mistake written
+ * twice. It renders each primitive's `origin/main` copy and its working-tree copy with DEFAULT
+ * props and compares the resolved class SETS, which is the check #16 ran by hand for `Input`
+ * (34 before, 34 after, empty symmetric difference). Set rather than string: cva emits the
+ * variant's classes after the base string, so the order legitimately changes and the content
+ * must not. */
+const equivalenceCases = [
+  ["Label", "src/components/ui/label.tsx", (m) => renderToStaticMarkup(React.createElement(m.Label, {}, "x")), "label"],
+  ["SelectTrigger", "src/components/ui/select.tsx", (m) => renderToStaticMarkup(React.createElement(m.Select, { open: true }, React.createElement(m.SelectTrigger, {}, "x"))), "select-trigger"],
+];
+
+for (const [name, relPath, render, slot] of equivalenceCases) {
+  let ok = false;
+  let detail = "";
+  try {
+    const before = setOf(classesOf(render(loadFrom(gitShow(relPath))), slot));
+    const after = setOf(classesOf(render(loadFrom(readFileSync(join(ROOT, relPath), "utf8"))), slot));
+    const lost = [...before].filter((c) => !after.has(c));
+    const gained = [...after].filter((c) => !before.has(c));
+    ok = lost.length === 0 && gained.length === 0;
+    detail = `${before.size} before, ${after.size} after` +
+      (ok ? "" : ` -- lost [${lost.join(" ")}] gained [${gained.join(" ")}]`);
+  } catch (e) {
+    detail = `threw: ${e.message}`;
+  }
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name} plane=console is class-identical to origin/main (${detail})`);
+  if (ok) pass += 1;
+  else fail += 1;
+}
+
+/* ── Parts that never reach server-rendered DOM (JH222) ──────────────────────────────────────
+ * `SelectItem` renders through `SelectPrimitive.Portal`, which produces nothing under
+ * `renderToStaticMarkup` -- verified, not assumed: rendering `Select > SelectContent > SelectItem`
+ * yields markup with no `data-slot="select-item"` in it at all. Same shape as `Toast` above.
+ *
+ * So it is proved in two decidable pieces instead of one rendered one:
+ *   a. the variant table resolves correctly, read off the exported cva function; and
+ *   b. the component actually DESTRUCTURES `plane` and hands it to that function.
+ * (b) is the half that matters, because (a) alone is exactly what passed review in #16 while the
+ * component did nothing -- a correct variant table wired to no one. */
+const itemConsole = setOf(Sel.selectItemVariants({}));
+const itemMember = setOf(Sel.selectItemVariants({ plane: "member" }));
+
+/* origin/main's `SelectItem` has no cva function to call, so its expectation is read out of the
+ * source: the class literal in the `cn(...)` that follows its `data-slot`. Extraction failing is
+ * a FAILURE, never a skip -- a check that quietly stops checking reports OK on a broken tree. */
+function baseLiteralFor(src, slot) {
+  const at = src.indexOf(`data-slot="${slot}"`);
+  if (at === -1) return null;
+  const m = src.slice(at).match(/cn\(\s*\n?\s*(["'])([\s\S]*?)\1/);
+  return m === null ? null : m[2];
+}
+
+const mainItemBase = baseLiteralFor(gitShow("src/components/ui/select.tsx"), "select-item");
+
+const derivedCases = [
+  ["SelectItem plane=member reaches the touch floor", () => itemMember.has(TOUCH)],
+  ["SelectItem plane=member reaches the member body size", () => itemMember.has("text-member-body")],
+  ["SelectItem default stays console", () => itemConsole.has("text-console-sm") && !itemConsole.has("text-member-body")],
+  /* Reported with its counts, like the rendered equivalence cases above, so the number never has
+   * to be recalled or guessed by anyone quoting this check. */
+  () => {
+      if (mainItemBase === null) return ["SelectItem plane=console is class-identical to origin/main (could not read the origin/main base literal)", false];
+      const before = setOf(mainItemBase);
+      const lost = [...before].filter((c) => !itemConsole.has(c));
+      const gained = [...itemConsole].filter((c) => !before.has(c));
+      const ok = lost.length === 0 && gained.length === 0;
+      return [
+        `SelectItem plane=console is class-identical to origin/main (${before.size} before, ` +
+          `${itemConsole.size} after` +
+          (ok ? ")" : ` -- lost [${lost.join(" ")}] gained [${gained.join(" ")}])`),
+      ok,
+    ];
+  },
+];
+
+/* The destructure check, applied to every component that claims a plane. This is the JH212 bug
+ * stated directly: `plane` declared and typed but left in `...props` compiles, type-checks and
+ * does nothing. `VariantProps` makes it optional and the rest-spread swallows it, so `tsc` is
+ * blind to it -- the only signals are the rendered DOM (used above where it exists) and the
+ * source itself (used here where it does not). */
+function destructures(src, fnName) {
+  const m = src.match(new RegExp(`function ${fnName}\\(\\{([^}]*)\\}`));
+  return m !== null && /(^|[\s,])plane([\s,]|$)/.test(m[1]);
+}
+
+const planedComponents = [
+  ["Label", "src/components/ui/label.tsx", "Label", "labelVariants"],
+  ["SelectTrigger", "src/components/ui/select.tsx", "SelectTrigger", "selectTriggerVariants"],
+  ["SelectItem", "src/components/ui/select.tsx", "SelectItem", "selectItemVariants"],
+];
+
+for (const [name, relPath, fnName, cvaName] of planedComponents) {
+  const src = readFileSync(join(ROOT, relPath), "utf8");
+  const ok = destructures(src, fnName) && new RegExp(`${cvaName}\\(\\{ plane \\}\\)`).test(src);
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name} destructures plane AND passes it to ${cvaName}`);
+  if (ok) pass += 1;
+  else fail += 1;
+}
+
+for (const entry of derivedCases) {
+  /* An entry is either `[name, () => boolean]` or a single `() => [name, boolean]` -- the latter
+   * for cases that want to report the numbers they actually measured. */
+  let name;
+  let ok = false;
+  try {
+    if (typeof entry === "function") [name, ok] = entry();
+    else { [name] = entry; ok = entry[1](); }
+  } catch (e) {
+    name = name ?? "derived case";
+    ok = false;
+  }
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}`);
+  if (ok) pass += 1;
+  else fail += 1;
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
