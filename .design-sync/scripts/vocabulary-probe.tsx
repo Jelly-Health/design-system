@@ -1,0 +1,12 @@
+/* Safelist probe — not a real component. Every step of the console/member/display type ramp
+ * and the four mapped radius utilities, so Tailwind's JIT scan generates them regardless of
+ * whether the current 20 components happen to use each one. Referenced via @source alongside
+ * the real component and preview sources. */
+export const VOCABULARY = (
+  <div>
+    <span className="text-console-2xs text-console-sm text-console-base text-console-md text-console-lg" />
+    <span className="text-console-xl text-console-2xl text-console-3xl text-console-4xl text-console-5xl text-console-6xl" />
+    <span className="text-member-body text-h1" />
+    <span className="rounded-sm rounded-md rounded-lg rounded-xl" />
+  </div>
+);
