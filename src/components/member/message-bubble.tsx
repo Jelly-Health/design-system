@@ -38,9 +38,15 @@ import { cn } from '../../lib/utils'
  * The floor is `--voice-on-member` on `--voice-member` in dark at **4.51:1** — passing, and tight,
  * which is consistent with `tokens.css` already marking dark `--accent-fill` as tight. Do not put
  * anything below the member body size on the member bubble in dark; there is no headroom for it.
+ *
+ * ── `break-words` is in the base, and the 88% cap is not a substitute for it ──────────────────
+ * The cap stops a long SENTENCE and does nothing about a long TOKEN. A URL, a pharmacy reference
+ * or a medication name with no spaces in it is wider than 88% of a phone, and `w-fit` then sizes
+ * the bubble to the token — so it is the bubble that leaves the thread, not just the text.
+ * Clipping instead would hide part of a message, which is the worse of the two.
  */
 const messageBubbleVariants = cva(
-  'w-fit max-w-[88%] rounded-[var(--radius-bubble)] px-4 py-3 text-member-body',
+  'w-fit max-w-[88%] rounded-[var(--radius-bubble)] px-4 py-3 text-member-body break-words',
   {
     variants: {
       voice: {
@@ -98,11 +104,19 @@ function MessageSender({
   return (
     <div
       data-slot="message-sender"
-      className={cn('flex items-center gap-2 self-start', className)}
+      /* `max-w-full` on the row, `min-w-0` and `break-words` on the name: one fix in three parts,
+       * and dropping any of them leaves a version of the bug. `self-start` sizes this row to its
+       * content rather than to the column, so nothing caps it; a flex item's default
+       * `min-width: auto` then refuses to shrink the name below its longest word.
+       *
+       * A name with a space or a hyphen in it wraps by itself once the row is capped — measured,
+       * and it is why `verify-member-states.mjs` uses an UNBREAKABLE name in its overflow case. A
+       * hyphenated double-barrel is not the hard case; a long name arriving as one token is. */
+      className={cn('flex max-w-full items-center gap-2 self-start', className)}
       {...props}
     >
       {children}
-      <span className="text-member-caption text-ink font-medium">{name}</span>
+      <span className="text-member-caption text-ink min-w-0 break-words font-medium">{name}</span>
     </div>
   )
 }
