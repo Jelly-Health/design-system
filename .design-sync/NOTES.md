@@ -328,3 +328,74 @@ Two things measured while doing it, both worth keeping:
   sync worktree drives the cached `chromium-1234` build (`~/Library/Caches/ms-playwright`) that
   `.design-sync/NOTES.md` records for 1.62.0 — the two share a revision, so no
   `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` dance was needed here.
+
+## The JH218 re-sync — 2026-09-02, 26 → 31 components
+
+Ran from a fresh worktree cut from `origin/main` at `6472904`. The five previews were already
+authored and committed by JH218; only the sync itself had been skipped, so this run was mostly
+mechanical. Three things were not.
+
+### 🔴 `ThreadSkeleton` was broken in the shipped package, and every existing check passed it
+
+`BubbleSkeleton` sized itself from percentage-width **children**. A bubble is `self-start`/`self-end`
+in a flex column, so it is shrink-to-fit: a percentage on a child resolves against a containing block
+whose own width depends on that child, which CSS resolves as `auto` during intrinsic sizing.
+Measured in headless chromium against a 420px `Thread`: **every bubble 32px** (its `px-4` padding
+alone) and **all six spacers 0px**, declared 62/43/38/71/56/29%. It rendered as three narrow pills.
+
+It had shipped that way since JH218 merged, and **nothing caught it**: `verify-member-states.mjs`
+checked the markup and the fill's ΔL\* contrast, both of which a 32px stub passes — the stub really
+does carry `--line` on `--sur`. `ScreenSkeleton` was fine throughout, because its `Lines` sit in a
+definite-width column; that contrast is what isolated it.
+
+**Fixed** by moving the width onto the bubble (`width: <widest line>`), which is what sizes a real
+bubble anyway; the spacers keep providing height only. **Guarded** by two new part-C cases in
+`verify-member-states.mjs` measuring each turn as a proportion of its track. Mutation-tested the way
+that file's own ledger requires: reverting the fix fails exactly those 4 cases (2 per theme) and
+**none of the other 46**, which is the evidence that no pre-existing check covered it.
+
+⚠️ The general lesson, worth more than the fix: **a skeleton's contrast and markup checks can all
+pass on a shape with no width.** A geometry claim needs a geometry measurement.
+
+### The five new components land in `general` unless `docsMap` rescues them
+
+Same trap `MemberField` hit, and for the same reason — the fuzzy-find looks for `MemberEmpty.tsx` /
+`member-empty.tsx` and these live in `state.tsx` and `skeleton.tsx`. Without a fix all five group as
+`general` **and** ship a one-line synthesized `.prompt.md`, so the design agent gets no usage
+guidance at all. A `componentSrcMap` src pin is still the discovery-killing trap recorded above —
+re-confirmed by reading `lib/source-kit.mjs` this run, the logic is unchanged.
+
+Fixed with five real docs under `.design-sync/docs/` bound via `cfg.docsMap`, each with
+`category: member` frontmatter. They fix the group and supply the `.prompt.md` in one move.
+⚠️ **They duplicate prose from `state.tsx` / `skeleton.tsx` and can rot** — each says so in its own
+body and names the source as the authority, same contract as `MemberField.md`.
+
+### Everything else
+
+- **No new prunes were needed.** `memberStateFrom` is camelCase and `MemberState`/`NonEmpty` are
+  type-only, so the content scan skipped all three on its own — JH218 predicted prunes would be
+  needed; they were not. Discovery found exactly 31.
+- **No probe widening** — JH218's prediction held. All five `--text-member-*` steps compile.
+- `extraEntries` still correct: **105 live exports** (99 + the 6 JH218 runtime names). Confirmed via
+  `Object.keys(window.JellyDS)` in a real page, not by grepping the bundle.
+- `MemberStateView`'s `Ready` preview was reworked: it rendered a bare `<p>`, which contradicts
+  `skeleton="thread"` — the loading state promised `Thread` geometry the ready state then did not
+  occupy, i.e. the exact reshape a skeleton exists to prevent, inside the one card meant to
+  demonstrate it. Now a real `Thread` with provider + member bubbles.
+- `conventions.md` was **validated, not rewritten**: 30/30 classes resolve in the compiled CSS,
+  28/28 component names live, 5/5 helpers on the global. One paragraph was ADDED for the four-state
+  pattern, which the file predated.
+- `tsc` via `node node_modules/typescript/bin/tsc`: **2 errors, the same two** (`badge.tsx`,
+  `button.tsx` ref-variance) — no new errors. ⚠️ `npx tsc` hits a decoy package here and prints
+  "This is not the tsc command you are looking for" while exiting 0; do not read that as a pass.
+
+### Re-sync risks from this run
+
+- **The three `[GRID_OVERFLOW] wide` warns on `MemberEmpty` / `MemberError` / `MemberStateView`**
+  were remedied with `cardMode: "column"`. As with the JH212 three, the applied remedy cannot
+  re-flag, so a clean re-validate is not evidence — confirmed on the review sheets instead.
+- **The `docsMap` docs are now six files that can rot.** If `state.tsx` or `skeleton.tsx` changes a
+  decision, update the matching `.md`. Nothing enforces this.
+- The borrowed-dependency recipe held unchanged: one symlink set from `wt-design-sync`'s install
+  plus `esbuild`/`@esbuild` from `web-app`. `playwright@1.62.0` into `.ds-sync` with
+  `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` launched the cached `chromium-1234` with no download.

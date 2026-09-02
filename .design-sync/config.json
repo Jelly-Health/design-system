@@ -70,6 +70,15 @@
       "cardMode": "single",
       "viewport": "480x360"
     },
+    "MemberEmpty": {
+      "cardMode": "column"
+    },
+    "MemberError": {
+      "cardMode": "column"
+    },
+    "MemberStateView": {
+      "cardMode": "column"
+    },
     "MessageBubble": {
       "cardMode": "column"
     },
@@ -100,7 +109,12 @@
   },
   "readmeHeader": ".design-sync/conventions.md",
   "docsMap": {
-    "MemberField": ".design-sync/docs/MemberField.md"
+    "MemberEmpty": ".design-sync/docs/MemberEmpty.md",
+    "MemberError": ".design-sync/docs/MemberError.md",
+    "MemberField": ".design-sync/docs/MemberField.md",
+    "MemberStateView": ".design-sync/docs/MemberStateView.md",
+    "ScreenSkeleton": ".design-sync/docs/ScreenSkeleton.md",
+    "ThreadSkeleton": ".design-sync/docs/ThreadSkeleton.md"
   },
   "extraEntries": [
     "./src/lib/utils.ts",
