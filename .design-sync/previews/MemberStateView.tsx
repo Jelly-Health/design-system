@@ -1,6 +1,18 @@
-import { MemberStateView, memberStateFrom } from "@jelly-health/design-system";
+import {
+  MemberStateView,
+  memberStateFrom,
+  MessageBubble,
+  Thread,
+} from "@jelly-health/design-system";
 
-const rows = [{ id: "1", text: "Your refill shipped" }];
+/* Message-shaped, and rendered through `Thread` in `Ready` below, because `skeleton="thread"`
+ * promises that the loading state holds the geometry the ready state will occupy. A ready branch
+ * that drew bare paragraphs would reshape the screen the moment the read landed — the one thing
+ * `ThreadSkeleton` exists to prevent. */
+const rows = [
+  { id: "1", voice: "provider" as const, text: "Your refill shipped this morning." },
+  { id: "2", voice: "member" as const, text: "great — thank you" },
+];
 
 const copy = {
   empty: {
@@ -31,13 +43,15 @@ export function Ready() {
         empty={copy.empty}
         error={copy.error}
       >
-        {(items) =>
-          items.map((row) => (
-            <p key={row.id} className="text-member-body text-ink">
-              {row.text}
-            </p>
-          ))
-        }
+        {(items) => (
+          <Thread>
+            {items.map((row) => (
+              <MessageBubble key={row.id} voice={row.voice}>
+                {row.text}
+              </MessageBubble>
+            ))}
+          </Thread>
+        )}
       </MemberStateView>
     </div>
   );

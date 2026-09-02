@@ -411,6 +411,20 @@ async function layout() {
         }
         const thread = document.querySelector('[data-testid="long-thread"]')
         const button = document.querySelector('[data-slot="member-error"] [data-slot="button"]')
+        /* Each skeleton bubble against the track it sits in, as a percentage. A bubble whose
+         * declared width does not resolve collapses to its own padding and still passes every
+         * other check in this file — see the block comment in `BubbleSkeleton`. */
+        const skel = document.querySelector('[data-case="thread-skeleton"] [data-slot="thread-skeleton"]')
+        const skelStyle = getComputedStyle(skel)
+        const trackWidth =
+          skel.clientWidth - parseFloat(skelStyle.paddingLeft) - parseFloat(skelStyle.paddingRight)
+        const skeletonBubbles = [...skel.children]
+          .filter((el) => el.dataset.slot === 'skeleton-block')
+          .map((el) => ({
+            declared: parseFloat(el.style.width),
+            measured: +((el.getBoundingClientRect().width / trackWidth) * 100).toFixed(1),
+            px: +el.getBoundingClientRect().width.toFixed(1),
+          }))
         const rgb = (el) => getComputedStyle(el).backgroundColor
         return {
           docScrollWidth: document.documentElement.scrollWidth,
@@ -418,6 +432,7 @@ async function layout() {
           vw,
           overhang,
           clipped,
+          skeletonBubbles,
           threadScrolls: thread.scrollHeight > thread.clientHeight,
           threadNoSideScroll: thread.scrollWidth <= thread.clientWidth + 1,
           buttonHeight: button.getBoundingClientRect().height,
@@ -439,6 +454,22 @@ async function layout() {
       check(`${t} a 500-turn thread scrolls inside its own box`, m.threadScrolls, `scrollHeight vs clientHeight`)
       check(`${t} and that box does not scroll sideways either`, m.threadNoSideScroll)
       check(`${t} the retry control measures at least 44px`, m.buttonHeight >= 44, `${m.buttonHeight}px`)
+
+      /* The turns have to be RAGGED, which they cannot be if their widths do not resolve. Checked
+       * as a proportion of the track rather than in px so it survives a viewport or padding
+       * change; 1.5pp of tolerance covers sub-pixel rounding only. A collapsed bubble reads as
+       * ~10% here instead of its declared 62%, which is the shape of the 2026-09-02 defect. */
+      check(
+        `${t} every skeleton turn is as wide as it declares`,
+        m.skeletonBubbles.length === 3 &&
+          m.skeletonBubbles.every((b) => Math.abs(b.measured - b.declared) <= 1.5),
+        m.skeletonBubbles.map((b) => `declared ${b.declared}% → ${b.measured}% (${b.px}px)`).join(' | '),
+      )
+      check(
+        `${t} and the turns are ragged rather than one column`,
+        new Set(m.skeletonBubbles.map((b) => b.px)).size === m.skeletonBubbles.length,
+        m.skeletonBubbles.map((b) => `${b.px}px`).join(' | '),
+      )
 
       /* The 3 ΔL* threshold is `tokens.css`'s own, for "a fill difference cannot delimit this".
        * Read from the RENDERED colours rather than from the file, so a broken cascade is caught
