@@ -35,3 +35,26 @@ export function Disabled() {
     </div>
   );
 }
+/**
+ * The member plane (JH222). The mark is the SAME 16px it is above — the difference is that 44px
+ * around it is tappable, and that each control reserves that 44px so a stacked pair cannot overlap.
+ * Two of them, deliberately: a lone checkbox cannot show the footprint, which is half the decision.
+ */
+export function Member() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Checkbox id="ds-check-member" plane="member" defaultChecked />
+        <Label htmlFor="ds-check-member" plane="member">
+          Text me refill reminders
+        </Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox id="ds-check-member-2" plane="member" />
+        <Label htmlFor="ds-check-member-2" plane="member">
+          Email me lab results
+        </Label>
+      </div>
+    </div>
+  );
+}

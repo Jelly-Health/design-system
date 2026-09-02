@@ -47,3 +47,33 @@ export function WithDisabledOption() {
     </RadioGroup>
   );
 }
+/**
+ * The member plane (JH222). Three options rather than one, because the thing worth seeing here is
+ * the group: each item's 44px hit area is its own reserved space, so tapping near the edge of one
+ * option cannot select its neighbour. Without the reserved footprint these would overlap by 16px
+ * in this exact `gap-3` layout, and the lower option would win.
+ */
+export function Member() {
+  return (
+    <RadioGroup defaultValue="monthly">
+      <div className="flex items-center gap-2">
+        <RadioGroupItem value="monthly" id="ds-radio-member-monthly" plane="member" />
+        <Label htmlFor="ds-radio-member-monthly" plane="member">
+          Every month
+        </Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <RadioGroupItem value="quarterly" id="ds-radio-member-quarterly" plane="member" />
+        <Label htmlFor="ds-radio-member-quarterly" plane="member">
+          Every three months
+        </Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <RadioGroupItem value="paused" id="ds-radio-member-paused" plane="member" />
+        <Label htmlFor="ds-radio-member-paused" plane="member">
+          Pause refills
+        </Label>
+      </div>
+    </RadioGroup>
+  );
+}

@@ -62,6 +62,10 @@ it does not get re-litigated as though nobody had thought about it.
 - **The member state patterns** — loading, empty, failed, and the overflow rules — added 2026-09-02
   by JH218. Not four components so much as one type that makes three of the four impossible to
   confuse: see § *The four states*.
+- **The three member screen shells** — the task screen, the onboarding step and the portal —
+  added 2026-09-02 by JH219. Each is one product decision about what a member is allowed to see and
+  reach, not a layout: no navigation on a task screen, no progress meter in onboarding, no unread
+  count in the portal. See § *The member screen chrome*.
 
 ## What landed, and what is still absent
 
@@ -104,19 +108,34 @@ their design", and connecting them to the designed vocabulary is a real design d
   on-palette; it should shrink to nothing as they are touched.
 - ~~**There is no member/marketing type ramp.**~~ **Fixed 2026-09-01 (JH214).** Five role-named
   steps, `--text-member-caption` through `--text-member-section` — see § *Type*.
-- **The primitives are typed and sized at console density, and only three of them can opt out yet.**
+- ~~**The primitives are typed and sized at console density, and only three of them can opt out yet.**~~
+  **Closed 2026-09-02 (JH222).**
   Re-measured on `main` 2026-09-02: all **21** size utilities in `src/components/` are
   `text-console-*`, **18** of them `text-console-sm` (12px), and none is a member token. `--touch-min`
   is worse than the earlier note here claimed — it said Button's tallest size was 40px against the
   44px floor, but the relevant number is the DEFAULT, `h-9` = **36px**, and **all six** sizes are
   under the floor. This is why `Jelly-Health/website` overrides both by hand.
 
-  **Partly closed 2026-09-02 (JH212).** `Button`, `Input` and `Textarea` now take `plane="member"` —
-  see § *The button matrix*. The remaining gap is the rest of the set: `Label`, `Checkbox`,
-  `RadioGroup`, `Select` and `Switch` have no member plane, so a member form built from those still
-  starts below the floor. Take them as their first real consumer needs them rather than in one sweep,
-  and note that `Checkbox`, `RadioGroup` and `Switch` are hit-target problems as much as type ones —
-  `Checkbox` is `size-4` (16px), which no font size can fix.
+  **Partly closed 2026-09-02 (JH212)** — `Button`, `Input` and `Textarea` — **and closed
+  2026-09-02 (JH222)** with the remaining five: `Label`, `Select`, `Checkbox`, `RadioGroup` and
+  `Switch`. A member form can now be built entirely from primitives that know the floor.
+
+  The note that used to sit here said to take them as their first real consumer needs them rather
+  than in one sweep. JH222 did the sweep instead, and the reason is worth recording rather than
+  quietly reversing: the pacing rule exists to stop speculative work outrunning a consumer, and
+  there is no consumer coming — `v2` has no member routes, and [JH219](https://trello.com/c/HRq6Uz7B),
+  which would create them, is Blocked on a scheduling question. Waiting for a consumer meant waiting
+  indefinitely, and five separate PRs would each have been too small to review meaningfully. The two
+  halves went in as separate commits, because they are not the same work.
+
+  `Label` and `Select` were type and height, a direct application of `Input`'s axis. The other three
+  are **hit-target problems, not type problems** — `Checkbox` is `size-4` (16px) against a 44px
+  floor, which no font size fixes — and they resolve it by expanding the **hit area** to
+  `--touch-min` while leaving the **painted box** exactly as drawn. Growing the box would be the
+  wrong fix: a 44px square checkbox is not what any canvas draws. See § *Reaching for the right
+  thing* and `checkbox.tsx`'s docstring for the full argument, including why the member plane also
+  has to reserve its own footprint (without it, two radios in `RadioGroup`'s own `grid gap-3` have
+  overlapping hit areas and the lower one silently wins taps meant for the upper).
 - **No lockfile.** The package has never been installed, so `yarn typecheck` cannot run. Creating one
   is bound up with the release-process decision that is still open.
 - ~~**No wordmark.**~~ **Fixed 2026-09-01 (JH200).** `<Wordmark />` ships from the package root —
@@ -449,6 +468,19 @@ for another specimen page to keep in sync with the code.
 | `size` | `default` 36px · `sm` 32px · `lg` 40px · `icon` 36px · `icon-sm` 32px · `icon-lg` 40px | Console heights. All six sit under the 44px member floor. |
 | `plane` | `console` (default) · `member` | Raises the control to `--touch-min` and `--text-member-body`. |
 
+Since JH222 the `plane` axis spans **all eight** primitives a member form is built from — `Button`,
+`Input`, `Textarea`, `Label`, `Select`, `Checkbox`, `RadioGroup`, `Switch` — and it means one of two
+things depending on what was actually below the floor:
+
+| | Primitives | What `plane="member"` does |
+|---|---|---|
+| **Type and height** | `Button` `Input` `Textarea` `Label` `Select` | Raises the box to `--touch-min` with `min-h` and the type to the member ramp. |
+| **Hit area only** | `Checkbox` `RadioGroup` `Switch` | Expands a centred pseudo-element to `--touch-min` and **leaves the painted box alone**, since these are 16–18px marks that no font size fixes and that must not grow. Also reserves the 44px footprint, or stacked controls overlap. |
+
+Both are the control's own job for the same reason the fourth rule below gives. `scripts/verify-touch-target.mjs`
+measures the second row in a real browser — hit area, painted box, footprint and a stacked group —
+because every claim in it is geometric and nothing that reads the source can check one.
+
 Four rules the type system cannot enforce and a reviewer has to:
 
 - **`destructive` is the only semantic variant, and nothing sits above or below it.** There is no
@@ -764,6 +796,160 @@ cases without anything prompting a recount), mutation-tested against six ways of
 work actually shipped and then caught: the optional marker rendering on every field that was not
 explicitly required, and `Button` declaring `plane` without ever destructuring it, so the prop
 leaked to the DOM and the variant did nothing while type-checking clean.
+
+### The member screen chrome
+
+JH219. `src/components/member/task-screen.tsx`, `onboarding.tsx` and `portal.tsx`. Three shells,
+each decided by one rule, and in every case the rule is about what a member is allowed to reach —
+which is why they are compositions and not primitives.
+
+```tsx
+import { TaskScreen, TaskDone } from "@jelly-health/design-system/member/task-screen";
+import { OnboardingScreen, OnboardingStep } from "@jelly-health/design-system/member/onboarding";
+import { PortalShell, PortalBody, PortalNav, PortalDestination } from "@jelly-health/design-system/member/portal";
+
+<TaskScreen
+  onExit={close}
+  title="Book your blood draw"
+  lede="Alex ordered a full panel. Pick a time near you."
+  action={<Button plane="member" className="w-full">Confirm booking</Button>}
+>
+  {slots}
+</TaskScreen>
+```
+
+#### 1. A task screen has no navigation, and that is enforced rather than asked for
+
+*"Reached by deep link from a message, and from inside the portal — same screen, two entry points.
+No navigation chrome to get lost in: land → one decision → done → back to the thread."* The layout
+spec states the same rule as a chrome rule about how the member **arrived**: *"arrived from a
+message → no shell, one exit back to the thread… A member who tapped a link in a text did not ask
+to enter a portal."*
+
+`TaskScreen` builds its own header and **there is no slot in it** — no `children`, no `nav`, no
+`actions`. The only control it can carry is the single exit it constructs from `onExit`. This is
+`MemberStateView`'s move applied to chrome: the wrong thing is not discouraged, it is
+unrepresentable. `title` and `lede` are **words, not markup**, for the same reason — a `ReactNode`
+header is a navigation bar waiting to happen.
+
+`TaskDone` is a second component rather than a `state` prop, because its props are not the deciding
+screen's: no `action`, no `actionNote`, and a **required** `backHref`. That requirement is
+`MemberError`'s `onRetry` argument transposed — a done screen with no way back is a dead end, and a
+member who arrived from a text message has no navigation to fall back on. It announces with
+`role="status"`, politely, where a failure announces assertively.
+
+**The spec's `.mp--bare` modifier is deliberately absent, and its absence closes a bug.** Bare mode
+is a portal with the sidebar suppressed, which is what a task screen is — and implementing it as a
+modifier is what produced the one defect the spec documents at length: `:not(.mp--bare)` had to be
+threaded through the container query, because without it *"the container query silently restored
+the sidebar in bare mode, giving a member who arrived from a text message the full navigable portal
+at desktop width… and it only appeared above 720px, so a phone-width check could not catch it."* A
+separate component cannot regress that way: there is no sidebar in `TaskScreen` to restore.
+
+#### 2. Onboarding has no progress indicator, and this one is documented rather than enforced
+
+Measured across all eleven canvas steps on 2026-09-02: **none draws one**, and step 9 says so
+outright — *"No progress bar."* The prospect canvas states it from the other side, for a member who
+leaves and returns weeks later: *"No progress meter, no 'you're 60% done,' no nag banner.
+Deliberately nothing to notice was missing."* No step draws a back control either.
+
+That is the arc's thesis, not a preference — *"Starts as a website, becomes a conversation, never
+becomes a form"* — and a progress bar is the most form-like thing a screen can grow.
+
+⚠️ **The difference between this rule and the one above is worth keeping.** There is no `step`,
+`of`, `progress` or `total` prop, so nothing hands a consumer one; the type fixture asserts that
+each of those does not compile. But `children` is a node slot and a consumer can put anything in
+it. A component cannot make its own children illegal. The verification therefore checks that the
+*chrome* renders no `role="progressbar"` and no counter — which catches this package regressing and
+does not catch a consumer. Saying so is worth more than a comment claiming a guarantee that is not
+there.
+
+Three things the canvas draws that are deliberately **not** built: the credential step's controls
+(*"sign-in method undecided — pending compliance review… none of the three methods is the chosen
+one"*), step 11's copy (*"awaiting alex's words — not shippable prose"*), and the 2px `--ink` card
+edge on steps 4 and 6, which marks the steps that were new in that revision — annotation addressed
+to a reader of the canvas, not a variant.
+
+#### 3. The portal is a container query, and its phone rules are scoped so they cannot race
+
+Desktop is three panes — nav, conversation, destination panel — and **picking a destination swaps
+the right panel only**. The conversation never moves: it is the spine of the product, and a portal
+that swapped it out would make the thread a destination among five. The sidebar is a fixed 15rem
+and the other two are equal halves of what is left; a panel given a fixed width *"made it a rail
+beside a wide chat rather than a peer to it"*, which the spec records as its own first build's
+mistake.
+
+Phone is the normal case, because *"the member arrives from a link in a text"*, and it is a stack
+rather than a shrunken desktop: destination list → destination content, with the conversation as a
+full-screen view reached from the message bar. `view` drives that and is inert above the
+breakpoint, so a consumer never has to know the rendered width.
+
+**720px, measured against the shell rather than the window.** The spec is explicit about why —
+*"the portal may be embedded at a width the viewport knows nothing about"* — and the phone frame it
+is drawn in is 360px inside a much wider page.
+
+Each phone rule is scoped to `@max-[720px]` rather than overridden by a `@min-[720px]` rule later
+in the file, and that is the same defect as the `.mp--bare` one in general form:
+`group-data-[view=pane]/portal:hidden` compiles to two classes' worth of specificity and
+`@min-[720px]/portal:flex` to one, so the desktop rule loses no matter what order they sit in.
+Confining the phone rule to phone widths means there is nothing to win.
+
+**There is no badge and no unread count**, and there is no prop for one: *"on a member surface a
+count is anxiety with no action attached."* A destination is an `<a>` rather than the canvas's
+`<button>` — a wireframe has nowhere to navigate to, and `Button`'s own docstring settles the
+general case.
+
+#### The primary button is a slot in all three, because two canvases disagree about it
+
+Every shell takes `action` as a node and none of them constructs the control. This is not
+squeamishness: the Task Screens canvas fills its primary with `--accent-fill` on `--ring-on-accent`,
+which is exactly `Button variant="default"`; the Onboarding canvas fills its primary with `--ink`
+on `--card` and draws its secondary as an `--accent-fill` edge with `--accent-ink` text. **Neither
+of the latter two is a variant `Button` has.** Picking one here would silently make one canvas
+wrong, and inventing a variant is JH201's variant-sheet work. So the shells hold the slot, the
+consumer passes the control, and the disagreement is reported rather than absorbed.
+
+What the slot's container does own is the touch floor, with `ThreadEvent`'s limitation intact: a
+container can only set a minimum on the box it owns. **Pass `plane="member"` on the control** — it
+is the only thing that raises the tap target, and, as one of the mutations below found, the only
+thing that moves the control off console type.
+
+#### What is not here
+
+- **The prospect portal.** JH219's card cites `jellyhealth Prospect Portal.dc.html` for "portal
+  nav"; that is the pre-payment surface, where a prospect reaches *"exactly two things — the
+  conversation with Alex, and a stripped membership explainer… no sidebar at all"*, drawn as two
+  tabs rather than a destination list. It is a different shell with a different rule and it is not
+  built here. `jellyhealth Portal.dc.html` is the member's own shell and is what this section
+  describes.
+- **The rows, chips, badges and document grid** inside a destination panel. Those are screen
+  content and belong to the portal's own card, not to its chrome.
+- **A drawn desktop width for onboarding.** The canvases draw it at phone width only, so the step
+  card is capped at `--measure` — the one width token this system has — rather than at a number
+  typed here. Flagged rather than invented.
+
+#### Verified by `scripts/verify-member-chrome.mjs`
+
+**76 cases in four parts**, on the split JH218 settled: structure via `renderToStaticMarkup`,
+**types** via `tsc` over a fixture whose nine `@ts-expect-error` directives assert that the wrong
+chrome does not compile, **layout** in real Chromium in both themes at **360px and 900px**, and the
+compiled stylesheet itself — a Tailwind class used only inside a package component compiles to
+nothing, silently, so a layout check can pass for the wrong reason if the rule it depends on was
+never generated.
+
+**Six mutations were applied and reverted; every one failed.** Two are worth repeating here:
+
+- **The nav's hide rule un-scoped from phone widths** — the spec's own bug, reintroduced — fails
+  **2 cases, both at 900px, and nothing at 360px moves.** A phone-width-only harness reports a
+  clean sweep. This is why the layout part runs at two widths.
+- **`min-w-0 break-words` dropped from a destination label** failed **8 cases, not the 4 expected**:
+  desktop was supposed to be safe behind a fixed 15rem sidebar and is not, because the harness also
+  renders a 360px shell on the 900px page to prove the breakpoint is a container query. That case
+  earned its place twice.
+
+⚠️ **None of this is reachable from a consumer yet.** `web-app/v2` is pinned to `b49123c`, which
+predates JH218, so neither the state patterns nor these shells can be imported there until someone
+re-pins — a JH217-shaped follow-up, not this card.
 
 ---
 

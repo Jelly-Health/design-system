@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
+import { cva, type VariantProps } from 'class-variance-authority'
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
@@ -24,22 +25,52 @@ function SelectValue({
   return <SelectPrimitive.Value data-slot="select-value" {...props} />
 }
 
+/**
+ * The select trigger, on either plane.
+ *
+ * `plane="console"` is the default and reproduces the exact class set this component shipped
+ * before the variant existed — `text-console-sm` and the two `data-[size=*]` heights moved out of
+ * the base string into the console variant unchanged, so no consumer's rendering changes.
+ *
+ * ── Why the member plane drops `size` rather than composing with it ───────────────────────────
+ * `size` is a CONSOLE density knob: `sm` (32px) and `default` (36px) are two points on a ramp that
+ * is entirely below `--touch-min`. There is no member reading of "small", because the floor is the
+ * floor — a 32px member trigger is not a compact member trigger, it is a broken one. So the member
+ * variant carries no `data-[size=*]` height at all and floors with `min-h` instead, the same shape
+ * `Input` uses and for the same reason: it raises the height without a compound variant, and a
+ * trigger whose value wraps is not clipped by it. Passing `size="sm"` alongside `plane="member"`
+ * is therefore not an error and not a conflict; the size is simply not consulted.
+ */
+const selectTriggerVariants = cva(
+  "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  {
+    variants: {
+      plane: {
+        console: 'text-console-sm data-[size=default]:h-9 data-[size=sm]:h-8',
+        member: 'min-h-[var(--touch-min)] text-member-body',
+      },
+    },
+    defaultVariants: {
+      plane: 'console',
+    },
+  },
+)
+
 function SelectTrigger({
   className,
   size = 'default',
+  plane,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: 'sm' | 'default'
-}) {
+} & VariantProps<typeof selectTriggerVariants>) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
-      className={cn(
-        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-console-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+      data-plane={plane ?? 'console'}
+      className={cn(selectTriggerVariants({ plane }), className)}
       {...props}
     >
       {children}
@@ -98,18 +129,54 @@ function SelectLabel({
   )
 }
 
+/**
+ * One option in the list, on either plane.
+ *
+ * ── Why this takes the axis SEPARATELY from `SelectTrigger`, rather than inheriting it ────────
+ * An option is a tap target in its own right — arguably the more important one, since the trigger
+ * is tapped once and the list is tapped to actually choose. It is also the half that is easy to
+ * forget, which is why it gets a plane rather than being left on console density behind a member
+ * trigger: a 44px trigger that opens a list of 30px rows has moved the floor violation rather than
+ * fixed it.
+ *
+ * It cannot inherit the trigger's plane by CSS. `SelectContent` renders through
+ * `SelectPrimitive.Portal`, so the list is not a DOM descendant of the trigger and no
+ * `data-[plane=member] &` selector can reach it. The two remaining options were a React context on
+ * `Select` — one `plane` for the whole compound — or an explicit prop on each part. The prop is
+ * what is here, on the repo's simplest-thing-that-works rule: a context is more machinery, and
+ * there is no consumer yet to tell us whether a mixed pairing (member trigger, console list) is
+ * something anyone wants. If passing it twice turns out to be error-prone in real use, a context
+ * on `Select` that these two default to is the upgrade path and does not break this signature.
+ *
+ * `min-h` rather than `h`: an option whose label wraps to two lines must grow, not clip.
+ */
+const selectItemVariants = cva(
+  "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+  {
+    variants: {
+      plane: {
+        console: 'text-console-sm',
+        member: 'min-h-[var(--touch-min)] text-member-body',
+      },
+    },
+    defaultVariants: {
+      plane: 'console',
+    },
+  },
+)
+
 function SelectItem({
   className,
+  plane,
   children,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> &
+  VariantProps<typeof selectItemVariants>) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-console-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        className,
-      )}
+      data-plane={plane ?? 'console'}
+      className={cn(selectItemVariants({ plane }), className)}
       {...props}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
@@ -182,4 +249,6 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
+  selectItemVariants,
+  selectTriggerVariants,
 }
