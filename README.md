@@ -79,10 +79,10 @@ colour values.
 
 | | State |
 |---|---|
-| Colour | 25 roles, both themes. **152 contrast pairs**, recomputed from the values in this file by `scripts/verify-contrast.py`: **0 failures**, 10 within 0.15 of their floor and marked `tight` at the declaration ([how](#contrast-is-computed-not-remembered)) |
-| Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590 bound to `font-light`/`font-normal`/`font-medium`/`font-semibold` (see [Weights are bound](#weights-are-bound-and-510590-are-the-point)), 11-step size ramp **under `--text-console-*`** (see [Type: sizes are prefixed](#type-sizes-are-prefixed-and-that-is-the-point)), negative tracking scaled to size |
+| Colour | 25 roles plus 3 marketing category tints (`--tint-lilac/butter/blush`, card grounds only, JH233), both themes. **194 contrast pairs**, recomputed from the values in this file by `scripts/verify-contrast.py`: **0 failures**, 10 within 0.15 of their floor and marked `tight` at the declaration ([how](#contrast-is-computed-not-remembered)) |
+| Type | Inter Variable (single family — Source Serif 4 retired), weights 300/400/510/590 bound to `font-light`/`font-normal`/`font-medium`/`font-semibold` (see [Weights are bound](#weights-are-bound-and-510590-are-the-point)), 11-step size ramp **under `--text-console-*`** (see [Type: sizes are prefixed](#type-sizes-are-prefixed-and-that-is-the-point)), a marketing display tier above it (`--text-marketing-h2/h1/display`, 36→52 / 48→80 / 56→96px, JH233), negative tracking scaled to size and bound as `tracking-display-xl/lg`, `tracking-display`, `tracking-micro` |
 | Spacing | 8px base, 9 steps plus named surface paddings and a 44px member touch floor |
-| Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px ceiling — plus one floating-layer shadow |
+| Shape | Split radius vocabulary — 6px buttons, 12px cards, 4px badges, 12px component ceiling, 20px `--radius-frame` for marketing photographs (`rounded-frame`; deliberately not `rounded-xl`, which stays 12px) — plus one floating-layer shadow |
 | Motion | 100/120/200ms, one easing curve, focus-ring geometry |
 | Components | The 19 shadcn primitives (`accordion` through `tooltip`), extracted from `web-app/v2/components/ui/` by **JH207**, plus `toast` — the one primitive the canvases never drew until **JH202**/**JH224** — bringing the set to 20. `src/index.ts` exports all of them; `./ui/*` subpath exports the same components individually |
 
@@ -432,7 +432,7 @@ from the hexes as they stand — no committed table, no remembered number. It is
 
 ```
 python3 scripts/verify-contrast.py --table
-→ 152 pairs (76 per theme) · 10 tight · 0 failures
+→ 194 pairs (97 per theme) · 10 tight · 0 failures
 ```
 
 Five checks, in the order they are likely to catch something:

@@ -76,6 +76,8 @@ each run:
   * re-declaring `--text-member-lede` fluid in a LATER media query,
     which defeated check 7 until it read every declaration and not
     just the first                                                   (check 7)
+  * lowering `--text-marketing-h1`'s clamp min to 0.75rem            (check 8)
+  * deleting `--text-marketing-h2--line-height` from `@theme inline` (check 6)
 
 A guard that has never failed is not evidence.
 """
@@ -101,9 +103,13 @@ CONSOLE = ["2xs", "sm", "base", "md", "lg", "xl",
 MEMBER_READING = ["caption", "body", "lede", "title"]
 MEMBER_DISPLAY = ["section"]
 MEMBER = MEMBER_READING + MEMBER_DISPLAY
-REQUIRED_SEMANTIC = [f"--text-member-{step}" for step in MEMBER] + ["--text-h1"]
+# The marketing display tier (JH233): three fluid steps above --text-h1, held
+# to the same three rules as the member display steps -- declared, aliased,
+# paired with a named leading, and starting at or above the floor.
+MARKETING = [f"--text-marketing-{step}" for step in ["h2", "h1", "display"]]
+REQUIRED_SEMANTIC = [f"--text-member-{step}" for step in MEMBER] + ["--text-h1"] + MARKETING
 # Steps allowed to carry a clamp(). Everything else must be a fixed size.
-FLUID_ALLOWED = [f"--text-member-{step}" for step in MEMBER_DISPLAY] + ["--text-h1"]
+FLUID_ALLOWED = [f"--text-member-{step}" for step in MEMBER_DISPLAY] + ["--text-h1"] + MARKETING
 
 # The member body floor, in px. Declared in tokens.css as `--text-member-body`
 # and restated here because check 8 has to compare against a number. Assumes a

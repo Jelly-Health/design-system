@@ -44,23 +44,27 @@ TIGHT_MARGIN = 0.15
 NEUTRAL = ["bg", "sur", "card", "mut-soft", "mut"]        # the five paper steps, --secondary == --mut
 WARM = ["voice-provider", "voice-coordinator"]            # the two warm bubble fills
 SEMANTIC = ["danger-surface", "success-surface"]          # tinted state surfaces
+# The marketing category tints (JH233). Card grounds only: ink lands on them, a text link in
+# --accent-ink lands on them, and a card's --line-strong hover edge and --ring focus must bound
+# against them. Nothing semantic does — a tint is never adjacent to a state surface by rule.
+TINT = ["tint-lilac", "tint-butter", "tint-blush"]
 
 FOREGROUNDS: dict[str, tuple[float, list[str], str]] = {
     # role: (floor, surfaces, why this lands there)
-    "ink":            (TEXT_FLOOR, NEUTRAL + WARM + SEMANTIC, "primary text, every surface"),
-    "ink-2":          (TEXT_FLOOR, NEUTRAL + WARM + SEMANTIC, "secondary prose and meaningful metadata"),
-    "ink-3":          (TEXT_FLOOR, NEUTRAL + WARM + SEMANTIC, "labels and timestamps — 'quiet, never unreadable'"),
-    "accent-ink":     (TEXT_FLOOR, NEUTRAL + WARM, "the accent AS TEXT on a page surface (its own comment)"),
+    "ink":            (TEXT_FLOOR, NEUTRAL + WARM + SEMANTIC + TINT, "primary text, every surface"),
+    "ink-2":          (TEXT_FLOOR, NEUTRAL + WARM + SEMANTIC + TINT, "secondary prose and meaningful metadata"),
+    "ink-3":          (TEXT_FLOOR, NEUTRAL + WARM + SEMANTIC + TINT, "labels and timestamps — 'quiet, never unreadable'"),
+    "accent-ink":     (TEXT_FLOOR, NEUTRAL + WARM + TINT, "the accent AS TEXT on a page surface (its own comment)"),
     "danger":         (TEXT_FLOOR, NEUTRAL + ["danger-surface"], "error text on a page or on its own tinted surface"),
     "success-ink":    (TEXT_FLOOR, NEUTRAL + ["success-surface"], "'only for a fact that already happened'"),
     "accent-on-accent": (TEXT_FLOOR, ["accent-fill"], "text and icons sitting on the accent fill"),
     "voice-on-member":  (TEXT_FLOOR, ["accent-fill"], "the member's own words; --voice-member aliases --accent-fill"),
     "danger-on-danger": (TEXT_FLOOR, ["danger"], "--destructive-foreground on --destructive"),
-    "line-strong":    (NON_TEXT_FLOOR, NEUTRAL + WARM, "BOUNDS rather than separates — 'meets 3:1, a NON-TEXT threshold'"),
+    "line-strong":    (NON_TEXT_FLOOR, NEUTRAL + WARM + TINT, "BOUNDS rather than separates — 'meets 3:1, a NON-TEXT threshold'"),
     "pending-rule":   (NON_TEXT_FLOOR, NEUTRAL + WARM, "the rule under an unapproved clinical value; same value as --line-strong"),
-    "ring":           (NON_TEXT_FLOOR, NEUTRAL + WARM, "focus ring on page surfaces"),
+    "ring":           (NON_TEXT_FLOOR, NEUTRAL + WARM + TINT, "focus ring on page surfaces"),
     "ring-on-accent": (NON_TEXT_FLOOR, ["accent-fill"], "the inverse ring: '--ring on --accent-fill measures 1.77'"),
-    "accent-fill":    (NON_TEXT_FLOOR, NEUTRAL, "a filled control has to be perceivable against the page"),
+    "accent-fill":    (NON_TEXT_FLOOR, NEUTRAL + TINT, "a filled control has to be perceivable against the page, or against a tinted card it sits in"),
 }
 
 SURFACES = sorted({s for _, surfaces, _ in FOREGROUNDS.values() for s in surfaces})

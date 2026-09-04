@@ -12,7 +12,7 @@
  *
  * Contrast is recomputed from the values below rather than read from any committed table: every
  * foreground role against every surface it can land on, both themes. `scripts/verify-contrast.py`
- * is that computation — 152 pairs, 0 failures — and it also checks that every ratio quoted in a
+ * is that computation — 194 pairs, 0 failures — and it also checks that every ratio quoted in a
  * comment here is still true, so an edit to a hex cannot leave a stale number behind it. Ten pairs
  * sit within 0.15 of their floor and are marked `tight` where they appear; three of those went
  * unmarked until the script was written (JH208).
@@ -98,6 +98,19 @@
    * the dual block below, not here. Declared here they would keep the light value inside `.dark` —
    * which is exactly what the structure note warns about, and what the first run of this commit
    * did. */
+
+  /* ---- Category tints: a ground for a card that belongs to a KIND, and nothing else ------------
+   * Marketing only, added 2026-09-04 for the homepage restyle (JH233). A tint carries NO meaning —
+   * reassigning a card to a different tint must change nothing the page asserts — so a tint is never
+   * a button fill, never a CTA, never text, and never adjacent to `--success-surface` or
+   * `--danger-surface` in the same component: if a card can show a status, it does not get a tint.
+   * Ink on a tint is always an `--ink` step; there are no per-tint foregrounds. Three, deliberately:
+   * a sage was drawn and dropped, because at ~2 ΔE from `--success-surface` two greens that close
+   * read as semantics.
+   */
+  --tint-lilac: #EEECF8;      /* cool — sits nearest the accent */
+  --tint-butter: #F7F1DE;     /* warm */
+  --tint-blush: #F8EBE8;      /* warmest */
 
   /* ---- Roles that are also shadcn names — declared here, never in the alias block ------------- */
   --secondary: #EDEAE3;
@@ -195,8 +208,24 @@
    * from v1 — not a new value. A marketing hero needs type that tracks the viewport. */
   --text-h1: clamp(2rem, 2.2vw + 1.35rem, 3.5rem);                /* 32 → 56px — one per page */
 
+  /* ══ The marketing display tier ═══════════════════════════════════════════════════════════════
+   * Three steps above `--text-h1`, for `Jelly-Health/website`. `--text-h1` is a SCREEN TITLE and
+   * the marketing hero was never that job: the site carried its own `--text-h1` (48 → 80px) in an
+   * UNLAYERED `:root` for two cards, because that is the only way a consumer can beat this file's
+   * plain `:root` — and an override that has to be unlayered to win is a cascade hazard, not a
+   * token. These retire it (JH233, 2026-09-04). The minima all clear the 16px floor by a wide
+   * margin; verify-type-ramp.py check 8 holds them to it anyway.
+   *
+   * These sizes are what `--weight-light` (300) exists for — and that rule stops at the VALUE, not
+   * the size: a price, a dose, a BMI or a medication name set at one of these steps takes
+   * `--weight-medium`. The page whispers; the numbers do not. */
+  --text-marketing-h2: clamp(2.25rem, 2vw + 1.6rem, 3.25rem);     /* 36 → 52px — every marketing <h2> */
+  --text-marketing-h1: clamp(3rem, 3.3vw + 2rem, 5rem);           /* 48 → 80px — the hero, and one statement per major section */
+  --text-marketing-display: clamp(3.5rem, 4.4vw + 2.2rem, 6rem);  /* 56 → 96px — one per page at most */
+
   /* Negative, scaled to size. Positive tracking survives on uppercase micro-labels only
    * (`--tracking-micro`) — uppercase always needs it, and that is the one place the rule inverts. */
+  --tracking-display-xl: -0.028em;   /* 64px and up — the marketing display step */
   --tracking-display-lg: -0.022em;   /* 48px and up */
   --tracking-display: -0.012em;      /* 20–32px */
   --tracking-body-15: -0.011em;      /* 15px */
@@ -237,12 +266,14 @@
   --touch-min: 44px;          /* member floor. Non-negotiable. */
 
   /* ══ Shape ═══════════════════════════════════════════════════════════════════════════════════
-   * Split vocabulary: a card and a button do not share a radius. 12px is the ceiling.
+   * Split vocabulary: a card and a button do not share a radius. 12px is the ceiling for anything
+   * that is a component — `--radius-frame` below is for a photograph's frame, never a card.
    */
   --radius-xs: 2px;
   --radius-badge: 4px;
   --radius: 6px;              /* buttons, inputs */
   --radius-lg: 12px;          /* cards, panels, dialogs */
+  --radius-frame: 20px;       /* media frames on marketing — a photograph sits between a card and a capsule. Not a component radius. */
   --radius-pill: 999px;       /* chips and badges only */
   --radius-round: 50%;        /* avatars, the composer send button, the switch knob */
   --radius-bubble: 14px;
@@ -323,6 +354,12 @@
   --voice-provider: #251E19;  /* the physician stays warm in dark */
   --voice-coordinator: #1F1A16;
   --voice-on-member: #F5F4F2; /* tight: 4.51 on --accent-fill — same value, same pair: the member's own bubble */
+
+  /* The tints sit between --mut-soft and --mut in lightness, each with a whisper of its hue, so
+   * `--ink-3` — which is AT the floor on --mut (4.54) — still clears every one of them. */
+  --tint-lilac: #1B1B27;
+  --tint-butter: #201E17;
+  --tint-blush: #221B1A;
 
   --secondary: #23252A;
 }
@@ -507,6 +544,11 @@
   --color-voice-member: var(--voice-member);
   --color-voice-on-member: var(--voice-on-member);
 
+  /* Category tints, as `bg-tint-*` only — see the role note in the :root block. */
+  --color-tint-lilac: var(--tint-lilac);
+  --color-tint-butter: var(--tint-butter);
+  --color-tint-blush: var(--tint-blush);
+
   /* Legacy ramp, still addressable as `bg-brand-*` for the 22 remaining call sites. */
   --color-brand-900: var(--jh-indigo-900);
   --color-brand-700: var(--jh-indigo-700);
@@ -526,6 +568,10 @@
   --radius-md: var(--radius);         /*  6px — buttons, inputs */
   --radius-lg: var(--radius-lg);      /* 12px — cards, panels */
   --radius-xl: var(--radius-lg);      /* 12px — the ceiling */
+  /* `rounded-frame`, 20px, for a photograph's frame. Deliberately NOT bound to `rounded-xl`: that
+   * utility is live on card.tsx, dialog.tsx and four v2 console panels, and rebinding it would
+   * retype all six with nothing to review against — the `--text-sm` failure above, on radius. */
+  --radius-frame: var(--radius-frame);
 
   /* Console ramp as utilities: `text-console-base`, `text-console-lg`. Tailwind's generic
    * `text-sm`/`text-base`/`text-lg` are deliberately NOT aliased here and keep their stock
@@ -547,6 +593,17 @@
   --text-member-title: var(--text-member-title);
   --text-member-section: var(--text-member-section);
   --text-h1: var(--text-h1);
+  --text-marketing-h2: var(--text-marketing-h2);
+  --text-marketing-h1: var(--text-marketing-h1);
+  --text-marketing-display: var(--text-marketing-display);
+
+  /* Tracking as utilities — `tracking-display-lg`, `tracking-micro` — so a consumer stops reaching
+   * for `tracking-[var(--tracking-micro)]` (the website's eyebrow did, and named the gap). Bound
+   * 2026-09-04 with the marketing tier; the display tier is unusable without its tracking. */
+  --tracking-display-xl: var(--tracking-display-xl);
+  --tracking-display-lg: var(--tracking-display-lg);
+  --tracking-display: var(--tracking-display);
+  --tracking-micro: var(--tracking-micro);
 
   /* Line-height, mapped DELIBERATELY like radius above — not derived by ratio. Without this,
    * Tailwind pairs each `--text-<size>` with a `--text-<size>--line-height` computed against
@@ -581,6 +638,12 @@
   --text-member-title--line-height: var(--leading-snug);
   --text-member-section--line-height: var(--leading-tight);
   --text-h1--line-height: var(--leading-display);
+  /* All three marketing steps take `display`, the tightest named leading. The reference draws the
+   * top two tighter still (0.98, 0.95); a second named leading for two call sites was judged not
+   * worth a token, and a bare number is what check 6 exists to refuse. */
+  --text-marketing-h2--line-height: var(--leading-display);
+  --text-marketing-h1--line-height: var(--leading-display);
+  --text-marketing-display--line-height: var(--leading-display);
 
   --shadow-float: var(--shadow-float);
   --ease-jh: var(--ease);
